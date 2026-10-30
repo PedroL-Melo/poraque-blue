@@ -24,17 +24,24 @@ constexpr uint32_t SAMPLE_INTERVAL_MS = 10;  // Taxa rápida de amostragem (100 
 constexpr uint32_t SERIAL_INTERVAL_MS = 500; // Taxa lenta de telemetria Serial (2 Hz)
 
 // ============================================================================
-// Parâmetros de Calibração Elétrica
+// Parâmetros de Conversão Física e Calibração Elétrica
 // ============================================================================
-// Fator do divisor resistivo da tensão no GPIO 34: V_real = V_adc * ((R1 + R2) / R2)
-// Ajuste conforme os resistores reais utilizados no circuito (1.0f = leitura direta no pino)
-constexpr float VOLTAGE_DIVIDER_RATIO = 11.0f; // Exemplo: R1 = 100k, R2 = 10k -> (100+10)/10 = 11.0
+// 1) Divisor de tensão no GPIO 34 (suporta até 25V na entrada -> ~3.205V no ADC)
+constexpr float R1 = 68000.0f; // Resistor superior (68 kOhm)
+constexpr float R2 = 10000.0f; // Resistor inferior (10 kOhm)
+float CALIB_V      = 1.000f;   // Fator de calibração fina da tensão (ajuste empírico com multímetro)
 
-// Parâmetros para o ACS712 (quando USE_INA219 não estiver definido)
-// Ponto quiescente (0A) em mV no pino do ESP32 (ex: 1650 mV após divisor 5V->3.3V, ou 2500 mV direto)
-constexpr float ACS712_ZERO_MV        = 1650.0f;
+// 2) Conversão de corrente e Offset de Zero configurável
+float CALIB_I      = 1.000f;   // Fator de calibração fina da corrente
+#ifdef USE_INA219
+// Offset de zero configurável para o INA219 (em mA) para compensar deriva residual sem carga
+float CURRENT_ZERO_OFFSET = 0.0f;
+#else
+// Offset de zero configurável para o ACS712 no GPIO 35 (em mV no pino do ADC com I = 0A)
+float CURRENT_ZERO_OFFSET = 1650.0f;
 // Sensibilidade efetiva em mV/A no pino do ADC (ex: ACS712-20A = 100 mV/A * (3.3/5.0) = 66.0 mV/A)
-constexpr float ACS712_MV_PER_AMP     = 66.0f;
+constexpr float ACS712_MV_PER_AMP = 66.0f;
+#endif
 
 // ============================================================================
 // Instâncias do Filtro de Média Móvel O(1) (padrão: 30 amostras = 300 ms a 100 Hz)
@@ -51,32 +58,53 @@ uint32_t lastSampleTimeMs = 0;
 uint32_t lastSerialTimeMs = 0;
 
 // ============================================================================
-// Funções Auxiliares de Leitura Modular
+// Funções de Aquisição Bruta e Conversão Física das Leituras Filtradas
 // ============================================================================
 
 /**
- * Lê a tensão no GPIO 34 usando analogReadMilliVolts (calibrado de fábrica no eFuse)
- * e converte para Volts considerando o divisor resistivo.
+ * Lê a tensão bruta no pino do ADC (GPIO 34) em milivolts (calibrado via eFuse).
  */
-float readVoltageVolts() {
-    uint32_t mv = analogReadMilliVolts(PIN_VOLTAGE_ADC);
-    return (static_cast<float>(mv) / 1000.0f) * VOLTAGE_DIVIDER_RATIO;
+float readRawVoltageMv() {
+    return static_cast<float>(analogReadMilliVolts(PIN_VOLTAGE_ADC));
 }
 
 /**
- * Lê a corrente em Amperes de forma modular:
- * - Via barramento I2C (INA219 nos pinos 21 e 22) se USE_INA219 estiver ativo
- * - Via porta analógica (ACS712 no GPIO 35) caso contrário
+ * Lê o sinal bruto de corrente:
+ * - Em mA via I2C (INA219) se USE_INA219 estiver ativo
+ * - Em mV via ADC (ACS712 no GPIO 35) caso contrário
  */
-float readCurrentAmps() {
+float readRawCurrentSignal() {
 #ifdef USE_INA219
     if (!ina219Ready) {
         return 0.0f;
     }
-    return ina219.getCurrent_mA() / 1000.0f;
+    return ina219.getCurrent_mA();
 #else
-    uint32_t mv = analogReadMilliVolts(PIN_ACS712_ADC);
-    return (static_cast<float>(mv) - ACS712_ZERO_MV) / ACS712_MV_PER_AMP;
+    return static_cast<float>(analogReadMilliVolts(PIN_ACS712_ADC));
+#endif
+}
+
+/**
+ * 1) Converte a leitura filtrada de tensão (em mV no pino ADC) para Volts (V) reais
+ *    aplicando a equação do divisor resistivo (R1 = 68k, R2 = 10k) e o fator CALIB_V.
+ */
+float convertFilteredVoltageToVolts(float filteredPinMv) {
+    const float pinVolts     = filteredPinMv / 1000.0f;
+    const float dividerRatio = (R1 + R2) / R2;
+    return pinVolts * dividerRatio * CALIB_V;
+}
+
+/**
+ * 2) Converte a leitura filtrada de corrente para Amperes (A) reais
+ *    descontando o offset de zero configurável (CURRENT_ZERO_OFFSET).
+ */
+float convertFilteredCurrentToAmps(float filteredRawCurrent) {
+#ifdef USE_INA219
+    const float correctedMa = filteredRawCurrent - CURRENT_ZERO_OFFSET;
+    return (correctedMa / 1000.0f) * CALIB_I;
+#else
+    const float deltaMv = filteredRawCurrent - CURRENT_ZERO_OFFSET;
+    return (deltaMv / ACS712_MV_PER_AMP) * CALIB_I;
 #endif
 }
 
@@ -111,20 +139,23 @@ void setup() {
 void loop() {
     const uint32_t now = millis();
 
-    // 1. Tarefa rápida: Amostragem dos sensores e atualização O(1) do filtro circular
+    // 1. Tarefa rápida: Amostragem bruta dos sensores e atualização O(1) do filtro circular
     if (now - lastSampleTimeMs >= SAMPLE_INTERVAL_MS) {
         lastSampleTimeMs = now;
 
-        voltageFilter.update(readVoltageVolts());
-        currentFilter.update(readCurrentAmps());
+        voltageFilter.update(readRawVoltageMv());
+        currentFilter.update(readRawCurrentSignal());
     }
 
-    // 2. Tarefa lenta: Impressão da telemetria no monitor Serial
+    // 2. Tarefa lenta: Conversão física das leituras filtradas e telemetria Serial
     if (now - lastSerialTimeMs >= SERIAL_INTERVAL_MS) {
         lastSerialTimeMs = now;
 
-        const float voltageV = voltageFilter.getAverage();
-        const float currentA = currentFilter.getAverage();
+        const float filteredVoltageMv  = voltageFilter.getAverage();
+        const float filteredCurrentRaw = currentFilter.getAverage();
+
+        const float voltageV = convertFilteredVoltageToVolts(filteredVoltageMv);
+        const float currentA = convertFilteredCurrentToAmps(filteredCurrentRaw);
         const float powerW   = voltageV * currentA;
 
 #ifdef USE_INA219

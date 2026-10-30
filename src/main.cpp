@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "MovingAverage.h"
 
 // Comente a linha abaixo para utilizar o sensor analógico ACS712 no GPIO 35
 #define USE_INA219
@@ -36,36 +37,10 @@ constexpr float ACS712_ZERO_MV        = 1650.0f;
 constexpr float ACS712_MV_PER_AMP     = 66.0f;
 
 // ============================================================================
-// Filtro de Média Móvel com Buffer Circular e Soma Acumulada O(1)
+// Instâncias do Filtro de Média Móvel O(1) (padrão: 30 amostras = 300 ms a 100 Hz)
 // ============================================================================
-template <size_t N>
-class MovingAverageFilter {
-public:
-    float update(float newReading) {
-        sum_ = sum_ - buffer_[index_] + newReading;
-        buffer_[index_] = newReading;
-        index_ = (index_ + 1) % N;
-        if (count_ < N) {
-            count_++;
-        }
-        return getAverage();
-    }
-
-    float getAverage() const {
-        return (count_ > 0) ? (sum_ / static_cast<float>(count_)) : 0.0f;
-    }
-
-private:
-    float buffer_[N] = {0.0f};
-    float sum_       = 0.0f;
-    size_t index_    = 0;
-    size_t count_    = 0;
-};
-
-// Instâncias dos filtros circulares (janela de 20 amostras = 200 ms a 100 Hz)
-constexpr size_t FILTER_WINDOW_SIZE = 20;
-MovingAverageFilter<FILTER_WINDOW_SIZE> voltageFilter;
-MovingAverageFilter<FILTER_WINDOW_SIZE> currentFilter;
+MovingAverage<> voltageFilter;
+MovingAverage<> currentFilter;
 
 #ifdef USE_INA219
 Adafruit_INA219 ina219;

@@ -21,7 +21,7 @@ constexpr uint8_t PIN_I2C_SCL     = 22; // I2C SCL para INA219
 // Parâmetros de Temporização Não-Bloqueante (millis)
 // ============================================================================
 constexpr uint32_t SAMPLE_INTERVAL_MS = 10;  // Taxa rápida de amostragem (100 Hz)
-constexpr uint32_t SERIAL_INTERVAL_MS = 500; // Taxa lenta de telemetria Serial (2 Hz)
+constexpr uint32_t SERIAL_INTERVAL_MS = 300; // Taxa de telemetria Serial / Plotter (300 ms)
 
 // ============================================================================
 // Parâmetros de Conversão Física e Calibração Elétrica
@@ -56,6 +56,7 @@ bool ina219Ready = false;
 
 uint32_t lastSampleTimeMs = 0;
 uint32_t lastSerialTimeMs = 0;
+float lastRawVoltageMv    = 0.0f;
 
 // ============================================================================
 // Funções de Aquisição Bruta e Conversão Física das Leituras Filtradas
@@ -108,6 +109,31 @@ float convertFilteredCurrentToAmps(float filteredRawCurrent) {
 #endif
 }
 
+/**
+ * Imprime o cabeçalho inicial de validação de bancada (Checkpoint 1).
+ */
+void printSerialHeader() {
+    Serial.println("==========================================================================");
+    Serial.println("  CHECKPOINT 1 - TELEMETRIA ESP32 (115200 baud | Taxa Serial: 300 ms)");
+    Serial.println("  Leitura Bruta (mV) | Tensao Filtrada (V) | Corrente Filtrada (A) | Potencia Instantanea (W)");
+    Serial.println("==========================================================================");
+}
+
+/**
+ * Imprime os dados de telemetria formatados com 2 casas decimais no formato
+ * "Label:Valor" separado por tabulação (\t), legível no Monitor Serial e
+ * diretamente compatível com o Serial Plotter do Arduino/PlatformIO.
+ */
+void printSerialTelemetry(float rawVoltageMv, float voltageV, float currentA, float powerW) {
+    Serial.printf(
+        "Bruta_mV:%.2f\tTensao_V:%.2f\tCorrente_A:%.2f\tPotencia_W:%.2f\n",
+        rawVoltageMv,
+        voltageV,
+        currentA,
+        powerW
+    );
+}
+
 // ============================================================================
 // Setup e Loop Principal
 // ============================================================================
@@ -134,20 +160,23 @@ void setup() {
     pinMode(PIN_ACS712_ADC, INPUT);
     Serial.println("[INFO] Sensor de corrente ACS712 configurado no GPIO 35 (ADC1).");
 #endif
+
+    printSerialHeader();
 }
 
 void loop() {
     const uint32_t now = millis();
 
-    // 1. Tarefa rápida: Amostragem bruta dos sensores e atualização O(1) do filtro circular
+    // 1. Tarefa rápida (10 ms): Amostragem bruta dos sensores e atualização O(1) do filtro circular
     if (now - lastSampleTimeMs >= SAMPLE_INTERVAL_MS) {
         lastSampleTimeMs = now;
 
-        voltageFilter.update(readRawVoltageMv());
+        lastRawVoltageMv = readRawVoltageMv();
+        voltageFilter.update(lastRawVoltageMv);
         currentFilter.update(readRawCurrentSignal());
     }
 
-    // 2. Tarefa lenta: Conversão física das leituras filtradas e telemetria Serial
+    // 2. Tarefa de telemetria (300 ms): Conversão física e impressão Serial / Serial Plotter
     if (now - lastSerialTimeMs >= SERIAL_INTERVAL_MS) {
         lastSerialTimeMs = now;
 
@@ -158,19 +187,7 @@ void loop() {
         const float currentA = convertFilteredCurrentToAmps(filteredCurrentRaw);
         const float powerW   = voltageV * currentA;
 
-#ifdef USE_INA219
-        const char* currentSensorName = "INA219 (I2C)";
-#else
-        const char* currentSensorName = "ACS712 (GPIO 35)";
-#endif
-
-        Serial.printf(
-            "[TELEMETRIA] Sensor: %s | Tensao: %.2f V | Corrente: %.3f A | Potencia: %.2f W\n",
-            currentSensorName,
-            voltageV,
-            currentA,
-            powerW
-        );
+        printSerialTelemetry(lastRawVoltageMv, voltageV, currentA, powerW);
     }
 }
 

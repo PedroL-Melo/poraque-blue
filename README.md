@@ -164,21 +164,7 @@ bicleta/
 
 ---
 
-## 4. Papéis da Equipe (Squad de 7 Integrantes)
-
-| Papel Oficial na Squad | Integrante Responsável | Atribuições Principais |
-| :--- | :--- | :--- |
-| 👑 **1. Leader / Product Owner (PO)** | `[Nome do Integrante]` | Gestão do cronograma de 4 semanas, integração entre os 5 módulos, revisão de entregas e condução dos Checkpoints. |
-| ⚡ **2. Engenheiro(a) de Hardware & Circuitos I** | `[Nome do Integrante]` | Projeto e montagem do divisor de tensão ($68\text{ k}\Omega / 10\text{ k}\Omega$), proteção de entrada e conversor *Buck* LM2596 ($5\text{ V}$ USB). |
-| 🔧 **3. Engenheiro(a) de Hardware & Circuitos II** | `[Nome do Integrante]` | Acoplamento eletromecânico do alternador, sensor de RPM e montagem do banco de cargas resistivas com relés/MOSFETs. |
-| 💻 **4. Dev Firmware & C++/IoT I** | `[Nome do Integrante]` | Desenvolvimento do firmware no ESP32 (`ADC1`, `INA219`/`ACS712`), filtro `MovingAverage.h` $O(1)$ e calibração de bancada. |
-| 📡 **5. Dev Firmware & C++/IoT II** | `[Nome do Integrante]` | Implementação da interrupção de RPM, conectividade Wi-Fi, publicação/subscrição de pacotes JSON via MQTT e controle de GPIOs. |
-| 🌐 **6. Dev Web / Frontend UI** | `[Nome do Integrante]` | Desenvolvimento do Dashboard responsivo (HTML/CSS/JS), integração WebSockets/MQTT, gráficos em tempo real e cálculo de energia/calorias. |
-| 📝 **7. Relator(a) Técnico(a) & QA** | `[Nome do Integrante]` | Validação experimental com multímetro, registro de dados nos Checkpoints, testes de bancada e redação do Relatório Técnico de 3 páginas. |
-
----
-
-## 5. Como Executar o Projeto (Firmware PlatformIO + Web)
+## 4. Como Executar o Projeto (Firmware PlatformIO + Web)
 
 ### 🛠️ 5.1. Compilando, Gravando e Monitorando o Firmware no ESP32
 
@@ -237,7 +223,7 @@ python -m http.server 8080
 
 ---
 
-## 6. Cronograma Executivo e Checkpoints (4 Semanas)
+## 5. Cronograma Executivo e Checkpoints (4 Semanas)
 
 - [x] **Semana 1 — Arquitetura, Dimensionamento Elétrico & Estrutura de Software**
   - [x] Dimensionamento do divisor de tensão ($R_1 = 68\text{ k}\Omega, R_2 = 10\text{ k}\Omega$) para entrada de até $25\text{ V CC}$.

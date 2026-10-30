@@ -59,15 +59,19 @@ flowchart TD
 
 #### 🔄 Módulo 1 (G1) — Sensor de Rotação (RPM) & Análise da Geradora
 * **Fundamentação Física:** Baseia-se na **Lei da Indução de Faraday-Lenz**, segundo a qual a força eletromotriz induzida ($\mathcal{E}$) no estator do alternador é diretamente proporcional à taxa de variação temporal do fluxo magnético ($\Phi$):
-  $$\mathcal{E} = -\frac{d\Phi}{dt}$$
-  A frequência de rotação ($f$) e a velocidade angular em rotações por minuto ($\text{RPM}$) são determinadas a partir da contagem de pulsos ($n$) em uma janela de tempo ($\Delta t$) considerando o número de ímãs/fendas ($N_{\text{pulsos}}$) por volta:
-  $$f = \frac{n}{\Delta t} \quad \Longrightarrow \quad \text{RPM} = \frac{n}{\Delta t \cdot N_{\text{pulsos}}} \times 60$$
+
+$$\mathcal{E} = -\frac{d\Phi}{dt}$$
+
+A frequência de rotação ($f$) e a velocidade angular em rotações por minuto ($\text{RPM}$) são determinadas a partir da contagem de pulsos ($n$) em uma janela de tempo ($\Delta t$) considerando o número de ímãs/fendas ($N_{\text{pulsos}}$) por volta:
+
+$$f = \frac{n}{\Delta t} \quad \implies \quad \text{RPM} = \frac{n}{\Delta t \cdot N_{\text{pulsos}}} \times 60$$
+
 * **Entregas de Hardware & Firmware:** Leitura de pulsos na roda/polia do alternador via **Sensor de Efeito Hall** ou **Encoder Óptico** conectado a pino com interrupção externa (`attachInterrupt` com `IRAM_ATTR`) no ESP32, cálculo de RPM com *debounce* por software e publicação em formato JSON via MQTT.
 
 ---
 
 #### 🔋 Módulo 2 (G2) — Regulação de Tensão & Módulo de Carregamento (Eletrônica de Potência)
-* **Fundamentação Física:** Transformação, proteção e regulação de potência elétrica em corrente contínua ($\eta = \frac{P_{\text{saída}}}{P_{\text{entrada}}}$) com chaveamento *step-down* (conversor CC-CC *Buck*), reduzindo a tensão de entrada ($12\text{ V}$ a $18\text{ V}$) para $5,0\text{ V}$ com alta eficiência energética e baixa dissipação térmica.
+* **Fundamentação Física:** Transformação, proteção e regulação de potência elétrica em corrente contínua ($\eta = P_{\text{saida}} / P_{\text{entrada}}$) com chaveamento *step-down* (conversor CC-CC *Buck*), reduzindo a tensão de entrada ($12\text{ V}$ a $18\text{ V}$) para $5,0\text{ V}$ com alta eficiência energética e baixa dissipação térmica.
 * **Entregas de Hardware:**
   * Recepção da tensão retificada instável do alternador ($12\text{ V}$ a $18\text{ V CC}$).
   * Estágio de proteção contra surtos, corrente reversa e sobretensão utilizando **Diodo Schottky/Zener** e **fusível rearmável (PTC)**.
@@ -77,20 +81,30 @@ flowchart TD
 
 #### 📐 Módulo 3 (G3) — Instrumentação & Sensores de Medição Elétrica (Telemetria de Entrada)
 * **Fundamentação Física:** Aplicação direta da **Lei de Ohm** ($U = R \cdot I$) e associação de resistores em série para condicionamento de sinais analógicos. Como o ADC do ESP32 opera com limite máximo de $3,3\text{ V}$ (faixa linear até $\approx 3,1\text{ V}$ na atenuação de $11\text{ dB}$), utiliza-se um divisor resistivo ($R_1 = 68\text{ k}\Omega$ e $R_2 = 10\text{ k}\Omega$) para mapear tensões de entrada de até **$25\text{ V CC}$** em uma saída máxima segura de $\approx 3,20\text{ V}$:
-  $$V_{\text{real}} = V_{\text{pino}} \cdot \left(\frac{R_1 + R_2}{R_2}\right) \cdot \text{CALIB\_V}$$
+
+$$V_{\text{real}} = V_{\text{pino}} \cdot \left(\frac{R_1 + R_2}{R_2}\right) \cdot \text{CALIB}_{\text{V}}$$
+
 * **Entregas de Hardware & Firmware:**
   * Leitura de tensão calibrada de fábrica no eFuse via `analogReadMilliVolts(34)` (`ADC1`, 12 bits, `ADC_11db`).
   * Medição de corrente elétrica em série de forma modular (`#define USE_INA219`), suportando tanto o sensor digital **INA219** (barramento I2C nos GPIOs `21` e `22`) quanto o sensor analógico de Efeito Hall **ACS712** (`GPIO 35` / `ADC1`).
   * Filtragem digital de ruído eletromecânico da pedalada por meio de um **Filtro de Média Móvel Circular de complexidade $O(1)$** (`MovingAverage.h`):
-    $$\bar{x}_k = \frac{1}{N} \sum_{i=0}^{N-1} x_{k-i}, \quad \text{com atualização } S_k = S_{k-1} - x_{\text{antigo}} + x_{\text{novo}}$$
+
+$$\bar{x}_k = \frac{1}{N} \sum_{i=0}^{N-1} x_{k-i}$$
+
+com atualização em tempo constante $O(1)$:
+
+$$S_k = S_{k-1} - x_{\text{antigo}} + x_{\text{novo}}$$
 
 ---
 
 #### 📊 Módulo 4 (G4) — Aplicação Web & Dashboard Frontend (Full-Stack & WebSockets)
 * **Fundamentação Física:** Integração numérica discreta da potência elétrica ao longo do tempo para obtenção do trabalho/energia convertida pela pedalada:
-  $$P(t) = U(t) \cdot I(t) \quad [\text{W}]$$
-  $$E = \int P \, dt \approx \sum P_k \cdot \Delta t \quad [\text{J}] \qquad \text{e} \qquad E_{\text{Wh}} = \frac{E_{\text{Joules}}}{3600} \quad [\text{Wh}]$$
-  Conversão equivalente em calorias mecânicas/metabólicas ($\text{kcal}$ considerando $1\text{ kcal} \approx 4184\text{ J}$).
+
+$$P(t) = U(t) \cdot I(t) \quad [\text{W}]$$
+
+$$E = \int P \, dt \approx \sum P_k \cdot \Delta t \quad [\text{J}] \qquad \text{e} \qquad E_{\text{Wh}} = \frac{E_{\text{Joules}}}{3600} \quad [\text{Wh}]$$
+
+Conversão equivalente em calorias mecânicas/metabólicas ($\text{kcal}$ considerando $1\text{ kcal} \approx 4184\text{ J}$).
 * **Entregas de Software:**
   * **Broker MQTT (Mosquitto)** e ponte **WebSockets** recebendo os pacotes JSON publicados pelo ESP32.
   * Interface Web responsiva (**HTML5 / CSS3 / JavaScript + Chart.js / ApexCharts**) com atualização em tempo real sem *refresh* de página.
@@ -100,8 +114,10 @@ flowchart TD
 
 #### 💡 Módulo 5 (G5) — Banco de Cargas Resistivas & Efeito Joule
 * **Fundamentação Física:** Aplicação das **Leis de Kirchhoff** (divisão de corrente em nós paralelos) e do **Efeito Joule**:
-  $$P_{\text{dissipada}} = R \cdot I^2 = \frac{U^2}{R_{\text{eq}}} \qquad \text{onde} \qquad \frac{1}{R_{\text{eq}}} = \sum_{i=1}^{n} \frac{1}{R_i}$$
-  Ao conectar novas cargas resistivas em paralelo no barramento do alternador, a resistência equivalente ($R_{\text{eq}}$) diminui, exigindo maior corrente induzida ($I$). Pela **Lei de Lenz**, a corrente mais elevada no induzido gera um conjugado eletromagnético opositor maior, tornando o pedal fisicamente mais pesado para o ciclista.
+
+$$P_{\text{dissipada}} = R \cdot I^2 = \frac{U^2}{R_{\text{eq}}} \qquad \text{onde} \qquad \frac{1}{R_{\text{eq}}} = \sum_{i=1}^{n} \frac{1}{R_i}$$
+
+Ao conectar novas cargas resistivas em paralelo no barramento do alternador, a resistência equivalente ($R_{\text{eq}}$) diminui, exigindo maior corrente induzida ($I$). Pela **Lei de Lenz**, a corrente mais elevada no induzido gera um conjugado eletromagnético opositor maior, tornando o pedal fisicamente mais pesado para o ciclista.
 * **Entregas de Hardware & Firmware:** Associação de resistores de potência de fio/porcelana e/ou lâmpadas automotivas $12\text{ V}$ em paralelo, chaveados eletronicamente pelas GPIOs do ESP32 através de **Módulos Relé optoacoplados** ou **MOSFETs de potência (ex: IRF540N)** comandados remotamente pelo Dashboard Web.
 
 ---

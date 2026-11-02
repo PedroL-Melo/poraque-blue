@@ -11,16 +11,17 @@ bool WifiService::connect() {
 
     WiFi.begin(ssid, password);
 
+    Serial.print("Conectando ao Wi-Fi");
+
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
     Serial.println();
-
+    
     Serial.println("Conectado!");
 
     return true;
-    
 }
 
 void WifiService::disconnect() {

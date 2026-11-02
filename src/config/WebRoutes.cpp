@@ -2,7 +2,11 @@
 
 void WebRoutes::registerRoutes(WebAppService& webApp) {
 
-    webApp.registerRoutes("/", "STATIC", "/index.html");
+    webApp.registerRoutes(
+        "/", 
+        "STATIC", 
+        "/index.html"
+    );
 
     webApp.registerRoutes(
         "/style.css",

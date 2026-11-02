@@ -18,7 +18,7 @@ bool WifiService::connect() {
     Serial.println("\nConectado!\n");
 
     Serial.print("IP: ");
-    Serial.print(WiFi.localIP().toString());
+    Serial.println(WiFi.localIP().toString());
 
     return true;
 

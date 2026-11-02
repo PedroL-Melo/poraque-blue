@@ -8,20 +8,20 @@ WifiService::WifiService(const char* ssid, const char* password) {
 bool WifiService::connect() {
 
     WiFi.mode(WIFI_STA);
-
     WiFi.begin(ssid, password);
 
     Serial.print("Conectando ao Wi-Fi");
-
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
-    Serial.println();
-    
-    Serial.println("Conectado!");
+    Serial.println("\nConectado!\n");
+
+    Serial.print("IP: ");
+    Serial.print(WiFi.localIP().toString());
 
     return true;
+
 }
 
 void WifiService::disconnect() {

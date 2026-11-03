@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Puraquê Blue Twin — Gêmeo Digital Interativo & Telemetria Eletromecânica</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  
+  <!-- Estilos e Fontes -->
+  <link rel="stylesheet" href="css/twin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- KaTeX para Renderização de Fórmulas de Física Aplicada -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <!-- ====================================================================
+       TOPO: HEADER INSTITUCIONAL & NAVEGAÇÃO DE CÂMERA
+       ==================================================================== -->
+  <header class="twin-header">
+    <div class="brand-section">
+      <div class="brand-logo-wrap" title="Puraquê Blue — IFAC">
+        <img src="logo.png" alt="Puraquê Blue Logo" class="brand-logo-img">
+      </div>
+      <div class="brand-title">
+        PURAQUÊ BLUE
+      </div>
+      <div class="institution-pill">
+        <span>IFAC — <strong>Campus Rio Branco</strong></span>
+        <span>Física Aplicada & IoT • 3º Ano Internet</span>
+      </div>
+    </div>
+
+    <!-- Seletor de Câmera / Visão Panorâmica e Sub-módulos -->
+    <nav class="nav-pills-container" aria-label="Navegação de Câmera">
+      <button class="nav-pill-target active" data-target="TARGET_GLOBAL" title="Visão Completa da Bicicleta (ESC)">
+        <span>🚲</span> Panorâmica
+      </button>
+      <button class="nav-pill-target" data-target="TARGET_HALL" title="Sensor Hall no Movimento Central (Tecla 1)">
+        <span>⚙️</span> G1: RPM & Hall
+      </button>
+      <button class="nav-pill-target" data-target="TARGET_ALT" title="Alternador Automotivo & Retificação (Tecla 2)">
+        <span>🧲</span> G3: Alternador
+      </button>
+      <button class="nav-pill-target" data-target="TARGET_ESP" title="Regulador LM2596 5V & ESP32 (Tecla 3)">
+        <span>🧠</span> G2: ESP32 & Buck
+      </button>
+      <button class="nav-pill-target" data-target="TARGET_LOADS" title="Banco de Cargas Resistivas & Torque de Lenz (Tecla 4)">
+        <span>💡</span> G5: Banco Cargas
+      </button>
+    </nav>
+
+  </header>
+
+  <!-- ====================================================================
+       VIEWPORT PRINCIPAL: SVG INTERATIVO DO GÊMEO DIGITAL
+       ==================================================================== -->
+  <main class="twin-viewport" id="viewport-container">
+
+    <!-- KPIs Globais Compactos (Visão Panorâmica) -->
+    <div class="global-kpi-bar" id="global-kpis">
+      <div class="kpi-card">
+        <div class="label">CADÊNCIA</div>
+        <div class="value cyan" id="kpi-rpm">75</div>
+        <div class="sub" id="kpi-freq">6.3 Hz</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">TENSÃO RETIFICADA</div>
+        <div class="value blue" id="kpi-voltage">15.20 V</div>
+        <div class="sub">GPIO 34 (ADC1)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">CORRENTE</div>
+        <div class="value emerald" id="kpi-current">1.45 A</div>
+        <div class="sub">INA219 / ACS712</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">POTÊNCIA ATIVA</div>
+        <div class="value amber" id="kpi-power">22.0 W</div>
+        <div class="sub">Instantânea</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">ENERGIA TOTAL</div>
+        <div class="value" id="kpi-joules">0 J</div>
+        <div class="sub"><span id="kpi-wh">0.00 Wh</span> • <span id="kpi-kcal">0.00 kcal</span></div>
+      </div>
+    </div>
+
+    <!-- STAGE SVG: Canvas em Coordenadas Normalizadas 1000x600 -->
+    <div class="svg-stage">
+      <svg id="bike-twin-svg" viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- DEFINIÇÕES: Filtros de Glow, Gradientes e Padrões -->
+        <defs>
+          <!-- Fundo de Grade Técnica -->
+          <pattern id="grid-pattern" width="40" height="40" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="40" y2="0" stroke="rgba(29, 99, 255, 0.05)" stroke-width="1" />
+            <line x1="0" y1="0" x2="0" y2="40" stroke="rgba(29, 99, 255, 0.05)" stroke-width="1" />
+          </pattern>
+
+          <!-- Filtro de Glow Ciano Elétrico -->
+          <filter id="glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <!-- Filtro de Glow Esmeralda -->
+          <filter id="glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <!-- Filtro de Glow Incandescente / Calor dos Resistores -->
+          <filter id="glow-hot" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <!-- Filtro de Glow Azul Frame -->
+          <filter id="glow-blue" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <!-- Gradiente do Quadro Elétrico -->
+          <linearGradient id="frame-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#2563eb" />
+            <stop offset="50%" stop-color="#1D63FF" />
+            <stop offset="100%" stop-color="#0d3899" />
+          </linearGradient>
+
+          <!-- Gradiente do Volante do Alternador -->
+          <radialGradient id="alt-radial" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#1e293b" />
+            <stop offset="60%" stop-color="#0f172a" />
+            <stop offset="100%" stop-color="#020617" />
+          </radialGradient>
+        </defs>
+
+        <!-- Retângulo de Fundo para Capturar Cliques de Deseleção -->
+        <rect id="svg-background-rect" x="0" y="0" width="1000" height="600" fill="transparent" />
+        <rect x="0" y="0" width="1000" height="600" fill="url(#grid-pattern)" pointer-events="none" />
+
+        <!-- Base / Suportes de Chão da Bicicleta Ergométrica -->
+        <g id="bike-base-stand" stroke="#334155" stroke-width="8" stroke-linecap="round">
+          <!-- Barra de solo longitudinal -->
+          <line x1="160" y1="520" x2="820" y2="520" stroke="#1e293b" stroke-width="12" />
+          <rect x="150" y="515" width="40" height="12" rx="4" fill="#0f172a" stroke="#475569" stroke-width="2" />
+          <rect x="790" y="515" width="40" height="12" rx="4" fill="#0f172a" stroke="#475569" stroke-width="2" />
+
+          <!-- Pés de sustentação traseiro e dianteiro -->
+          <line x1="230" y1="390" x2="180" y2="520" stroke="#1e293b" stroke-width="10" />
+          <line x1="680" y1="240" x2="780" y2="520" stroke="#1e293b" stroke-width="10" />
+        </g>
+
+        <!-- ================================================================
+             MÓDULO 3 (G3) — ALTERNADOR AUTOMOTIVO & INDUÇÃO (230, 390)
+             ================================================================ -->
+        <g id="subsystem-alternator" class="subsystem-group">
+          <!-- Anéis de Linhas de Campo Magnético Pulsantes (Faraday-Lenz) -->
+          <circle class="alt-flux-ring" cx="230" cy="390" r="95" fill="none" stroke="#00E5FF" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.3" />
+          <circle class="alt-flux-ring" cx="230" cy="390" r="115" fill="none" stroke="#00E5FF" stroke-width="1" stroke-dasharray="8 8" opacity="0.2" />
+          <circle class="alt-flux-ring" cx="230" cy="390" r="135" fill="none" stroke="#00E5FF" stroke-width="0.8" stroke-dasharray="12 12" opacity="0.1" />
+
+          <!-- Carcaça Estator do Alternador -->
+          <circle cx="230" cy="390" r="82" fill="url(#alt-radial)" stroke="#38bdf8" stroke-width="3" filter="url(#glow-blue)" />
+          <circle cx="230" cy="390" r="70" fill="none" stroke="#1e293b" stroke-width="6" />
+
+          <!-- Bobinas do Estator (Cobre/Âmbar) -->
+          <g stroke="#b45309" stroke-width="4" stroke-linecap="round">
+            <line x1="230" y1="322" x2="230" y2="335" />
+            <line x1="230" y1="445" x2="230" y2="458" />
+            <line x1="162" y1="390" x2="175" y2="390" />
+            <line x1="285" y1="390" x2="298" y2="390" />
+            <line x1="182" y1="342" x2="191" y2="351" />
+            <line x1="269" y1="429" x2="278" y2="438" />
+            <line x1="182" y1="438" x2="191" y2="429" />
+            <line x1="269" y1="351" x2="278" y2="342" />
+          </g>
+
+          <!-- Rotor Giratório do Alternador (Gira com acoplamento) -->
+          <g id="alt-rotor">
+            <circle cx="230" cy="390" r="48" fill="#0f172a" stroke="#64748b" stroke-width="2" />
+            <!-- Polos em Garra (Pólos Magnéticos N/S) -->
+            <path d="M 230 350 L 242 385 L 218 385 Z" fill="#38bdf8" opacity="0.7" />
+            <path d="M 230 430 L 218 395 L 242 395 Z" fill="#38bdf8" opacity="0.7" />
+            <path d="M 190 390 L 225 402 L 225 378 Z" fill="#ef4444" opacity="0.7" />
+            <path d="M 270 390 L 235 378 L 235 402 Z" fill="#ef4444" opacity="0.7" />
+            <!-- Eixo Central -->
+            <circle cx="230" cy="390" r="12" fill="#334155" stroke="#94a3b8" stroke-width="2" />
+            <circle cx="230" cy="390" r="4" fill="#00E5FF" />
+          </g>
+
+          <!-- Ponte Retificadora Integrada e Borne de Saída -->
+          <rect x="258" y="325" width="24" height="16" rx="3" fill="#1e293b" stroke="#00E5FF" stroke-width="1.5" />
+          <text x="270" y="336" font-size="8" fill="#00E5FF" font-family="monospace" text-anchor="middle" font-weight="bold">B+</text>
+        </g>
+
+        <!-- Correia / Corrente de Transmissão entre Pedal e Alternador -->
+        <path id="drive-belt" d="M 230 350 L 460 345 A 45 45 0 0 1 460 435 L 230 430 A 40 40 0 0 1 230 350" 
+              fill="none" stroke="#475569" stroke-width="4.5" stroke-dasharray="6 4" />
+
+        <!-- ================================================================
+             QUADRO DA BICICLETA ERGOMÉTRICA (ELECTRIC BLUE #1D63FF)
+             ================================================================ -->
+        <g id="bike-frame" stroke="url(#frame-gradient)" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-blue)">
+          <!-- Chainstay: Traseira -> Movimento Central -->
+          <line x1="230" y1="390" x2="460" y2="390" stroke-width="14" />
+          <!-- Seatstay: Traseira -> Base do Selim -->
+          <line x1="230" y1="390" x2="420" y2="240" stroke-width="12" />
+          <!-- Tubo do Selim: Movimento Central -> Canote -->
+          <line x1="460" y1="390" x2="410" y2="185" stroke-width="14" />
+          <!-- Tubo Inferior / Central Principal: Movimento Central -> Caixa de Direção -->
+          <line x1="460" y1="390" x2="680" y2="240" stroke-width="16" />
+          <!-- Tubo Superior / Stiffener -->
+          <line x1="420" y1="240" x2="680" y2="240" stroke-width="12" />
+          <!-- Tubo da Caixa de Direção (Head Tube): Cockpit -->
+          <line x1="680" y1="240" x2="680" y2="180" stroke-width="14" />
+        </g>
+
+        <!-- Selim Anatômico & Canote -->
+        <g id="bike-saddle">
+          <line x1="410" y1="185" x2="410" y2="168" stroke="#64748b" stroke-width="8" stroke-linecap="round" />
+          <path d="M 370 168 C 390 162, 430 162, 450 168 C 455 174, 440 180, 420 180 C 400 180, 375 174, 370 168 Z" 
+                fill="#0f172a" stroke="#1D63FF" stroke-width="2.5" />
+        </g>
+
+        <!-- Guidão Cockpit / Mesa -->
+        <g id="bike-cockpit">
+          <!-- Guidão Bullhorn / Triathlon -->
+          <path d="M 680 180 L 680 145 L 720 140 L 730 155" fill="none" stroke="#64748b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+          <!-- Apoios de Braço -->
+          <rect x="670" y="142" width="22" height="7" rx="2" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+        </g>
+
+        <!-- ================================================================
+             MÓDULO 1 (G1) — EIXO DO MOVIMENTO CENTRAL & SENSOR HALL (460, 390)
+             ================================================================ -->
+        <g id="subsystem-hall-crank" class="subsystem-group">
+          <!-- Coroa Dentada Fixa no Eixo -->
+          <circle cx="460" cy="390" r="46" fill="#0b1329" stroke="#1D63FF" stroke-width="3" />
+          <circle cx="460" cy="390" r="32" fill="none" stroke="#1e293b" stroke-width="2" stroke-dasharray="8 6" />
+
+          <!-- Sensor Hall Fixo no Quadro (GPIO 27) -->
+          <g id="hall-sensor-bracket">
+            <rect x="484" y="380" width="16" height="12" rx="2" fill="#0f172a" stroke="#00F59B" stroke-width="1.5" />
+            <circle id="hall-sensor-led" cx="492" cy="386" r="3" fill="#064e3b" />
+            <text x="506" y="388" font-size="8" fill="#00F59B" font-family="monospace">HALL (27)</text>
+          </g>
+
+          <!-- Conjunto Rotativo: Pedivela, Pedais e Disco Magnético com 5 Ímãs -->
+          <g id="crank-rotating">
+            <!-- Braço Direito da Pedivela -->
+            <line x1="460" y1="390" x2="460" y2="306" stroke="#94a3b8" stroke-width="9" stroke-linecap="round" />
+            <g id="pedal-right">
+              <rect x="446" y="300" width="28" height="12" rx="3" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+              <circle cx="460" cy="306" r="2.5" fill="#38bdf8" />
+            </g>
+
+            <!-- Braço Esquerdo da Pedivela (180 graus oposto) -->
+            <line x1="460" y1="390" x2="460" y2="474" stroke="#64748b" stroke-width="9" stroke-linecap="round" />
+            <g id="pedal-left">
+              <rect x="446" y="468" width="28" height="12" rx="3" fill="#1e293b" stroke="#64748b" stroke-width="1.5" />
+              <circle cx="460" cy="474" r="2.5" fill="#94a3b8" />
+            </g>
+
+            <!-- Disco com 5 Ímãs de Neodímio Circulares -->
+            <g id="encoder-magnets">
+              <circle cx="460" cy="358" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1" />
+              <circle cx="490" cy="380" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1" />
+              <circle cx="479" cy="416" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1" />
+              <circle cx="441" cy="416" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1" />
+              <circle cx="430" cy="380" r="4.5" fill="#38bdf8" stroke="#fff" stroke-width="1" />
+            </g>
+
+            <!-- Tampa do Movimento Central -->
+            <circle cx="460" cy="390" r="16" fill="#1e293b" stroke="#1D63FF" stroke-width="2.5" />
+            <circle cx="460" cy="390" r="6" fill="#38bdf8" />
+          </g>
+        </g>
+
+        <!-- ================================================================
+             LINHAS DE FLUXO DE POTÊNCIA (CONDUTORES ELÉTRICOS DINÂMICOS)
+             ================================================================ -->
+        <g id="electrical-bus-conductors">
+          <!-- Barramento DC Principal (Alternador -> ESP32 -> Banco de Cargas) -->
+          <path id="power-bus-line" d="M 270 335 L 420 375 L 490 305 L 670 195" 
+                fill="none" stroke="#1D63FF" stroke-width="3.5" stroke-linecap="round" />
+
+          <!-- Linha de Pulso de Fluxo de Corrente Animada -->
+          <path id="current-flux-line" d="M 270 335 L 420 375 L 490 305 L 670 195" 
+                fill="none" stroke="#00E5FF" stroke-width="2" class="flux-dash" opacity="0.85" filter="url(#glow-cyan)" />
+
+          <!-- Linha de Alimentação USB 5,0V (ESP32 / LM2596 -> Guidão Cockpit) -->
+          <path id="usb-5v-line" d="M 525 285 Q 590 230 655 190" 
+                fill="none" stroke="#00F59B" stroke-width="2.5" stroke-dasharray="3 3" filter="url(#glow-emerald)" />
+        </g>
+
+        <!-- ================================================================
+             MÓDULO 2 (G2) — REGULADOR BUCK LM2596 & ESP32 (500, 290)
+             ================================================================ -->
+        <g id="subsystem-esp32-buck" class="subsystem-group">
+          <!-- Caixa Protetora no Tubo Central -->
+          <rect x="470" y="260" width="65" height="58" rx="6" fill="#080e1e" stroke="#1D63FF" stroke-width="2" filter="url(#glow-blue)" />
+          
+          <!-- Indutor e Capacitores do LM2596 Step-Down -->
+          <circle cx="488" cy="278" r="9" fill="#1e293b" stroke="#00F59B" stroke-width="1.5" />
+          <circle cx="488" cy="278" r="4" fill="#064e3b" />
+          <rect x="480" y="294" width="7" height="14" rx="2" fill="#334155" />
+          <rect x="490" y="294" width="7" height="14" rx="2" fill="#334155" />
+
+          <!-- Módulo ESP32-WROOM -->
+          <rect x="506" y="272" width="22" height="34" rx="2" fill="#020617" stroke="#475569" stroke-width="1" />
+          <!-- Antena Wi-Fi Meandro no PCB -->
+          <path d="M 508 274 H 526 V 280 H 514 V 283 H 526" fill="none" stroke="#f59e0b" stroke-width="0.8" />
+          
+          <!-- LED de Status da Telemetria (Pisca a cada pacote de 300ms) -->
+          <circle id="esp32-status-led" cx="517" cy="292" r="3" fill="#0d47a1" />
+
+          <!-- Selo de Tensão USB Estabilizada 5,0V -->
+          <text x="502" y="328" font-size="7.5" fill="#00F59B" font-family="monospace" text-anchor="middle" font-weight="bold">LM2596 (5.0V)</text>
+        </g>
+
+        <!-- ================================================================
+             MÓDULO 4 (G5) — BANCO DE CARGAS RESISTIVAS & COCKPIT (680, 180)
+             ================================================================ -->
+        <g id="subsystem-load-bank" class="subsystem-group">
+          <!-- Dissipador / Suporte de Alumínio no Guidão -->
+          <rect x="645" y="152" width="72" height="52" rx="5" fill="#0b1329" stroke="#FF9500" stroke-width="1.8" />
+          <line x1="655" y1="152" x2="655" y2="157" stroke="#475569" stroke-width="2" />
+          <line x1="667" y1="152" x2="667" y2="157" stroke="#475569" stroke-width="2" />
+          <line x1="679" y1="152" x2="679" y2="157" stroke="#475569" stroke-width="2" />
+          <line x1="691" y1="152" x2="691" y2="157" stroke="#475569" stroke-width="2" />
+          <line x1="703" y1="152" x2="703" y2="157" stroke="#475569" stroke-width="2" />
+
+          <!-- Resistor Cerâmico 1 (10W - Relé GPIO 25) -->
+          <circle id="resistor-1-glow" cx="660" cy="178" r="14" fill="#FF9500" opacity="0.0" filter="url(#glow-hot)" />
+          <rect id="resistor-1-body" x="654" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
+          <text x="660" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">10W</text>
+
+          <!-- Resistor Cerâmico 2 (15W - MOSFET GPIO 26) -->
+          <circle id="resistor-2-glow" cx="680" cy="178" r="14" fill="#FF6F00" opacity="0.0" filter="url(#glow-hot)" />
+          <rect id="resistor-2-body" x="674" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
+          <text x="680" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">15W</text>
+
+          <!-- Resistor Cerâmico 3 (25W - MOSFET GPIO 32) -->
+          <circle id="resistor-3-glow" cx="700" cy="178" r="14" fill="#FF3366" opacity="0.0" filter="url(#glow-hot)" />
+          <rect id="resistor-3-body" x="694" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
+          <text x="700" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">25W</text>
+
+          <!-- Porta USB de Saída de Carga (Dispositivo móvel) -->
+          <rect x="635" y="184" width="12" height="8" rx="1.5" fill="#00F59B" opacity="0.8" />
+          <text x="626" y="190" font-size="7" fill="#00F59B" font-family="monospace">USB</text>
+        </g>
+
+        <!-- ================================================================
+             HOTSPOTS INTERATIVOS PULSANTES (Mapeados na Tabela da Seção 3)
+             ================================================================ -->
+
+        <!-- HOTSPOT 1: Sensor Hall & RPM (460, 390) -->
+        <g id="hotspot-hall" class="hotspot-node">
+          <circle class="hotspot-ring" cx="460" cy="390" r="14" fill="none" stroke="#00E5FF" stroke-width="2" />
+          <circle class="hotspot-core" cx="460" cy="390" r="8" fill="#00E5FF" filter="url(#glow-cyan)" />
+          <!-- Pill Badge -->
+          <rect x="420" y="420" width="80" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#00E5FF" stroke-width="1" />
+          <text class="hotspot-pill-badge" x="460" y="432" text-anchor="middle">G1: SENSOR</text>
+        </g>
+
+        <!-- HOTSPOT 2: Alternador & Indução (230, 390) -->
+        <g id="hotspot-alt" class="hotspot-node">
+          <circle class="hotspot-ring" cx="230" cy="390" r="14" fill="none" stroke="#38bdf8" stroke-width="2" />
+          <circle class="hotspot-core" cx="230" cy="390" r="8" fill="#38bdf8" filter="url(#glow-cyan)" />
+          <!-- Pill Badge -->
+          <rect x="180" y="420" width="100" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#38bdf8" stroke-width="1" />
+          <text class="hotspot-pill-badge" x="230" y="432" text-anchor="middle">G3: ALTERNADOR</text>
+        </g>
+
+        <!-- HOTSPOT 3: Buck LM2596 & ESP32 (500, 290) -->
+        <g id="hotspot-esp" class="hotspot-node">
+          <circle class="hotspot-ring" cx="500" cy="290" r="14" fill="none" stroke="#00F59B" stroke-width="2" />
+          <circle class="hotspot-core" cx="500" cy="290" r="8" fill="#00F59B" filter="url(#glow-emerald)" />
+          <!-- Pill Badge -->
+          <rect x="460" y="235" width="80" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#00F59B" stroke-width="1" />
+          <text class="hotspot-pill-badge" x="500" y="247" text-anchor="middle">G2: ESP32</text>
+        </g>
+
+        <!-- HOTSPOT 4: Banco de Cargas & Torque de Lenz (680, 180) -->
+        <g id="hotspot-loads" class="hotspot-node">
+          <circle class="hotspot-ring" cx="680" cy="180" r="14" fill="none" stroke="#FF9500" stroke-width="2" />
+          <circle class="hotspot-core" cx="680" cy="180" r="8" fill="#FF9500" filter="url(#glow-hot)" />
+          <!-- Pill Badge -->
+          <rect x="635" y="115" width="90" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#FF9500" stroke-width="1" />
+          <text class="hotspot-pill-badge" x="680" y="127" text-anchor="middle">G5: CARGAS</text>
+        </g>
+
+        <!-- Linhas HUD de Chamada Técnicas (Visíveis apenas em Modo Inspeção) -->
+        <g id="hud-callouts" opacity="0" style="transition: opacity 0.3s ease;">
+          <line x1="230" y1="390" x2="160" y2="340" stroke="#00E5FF" stroke-width="1" stroke-dasharray="2 2" />
+          <line x1="460" y1="390" x2="520" y2="440" stroke="#00E5FF" stroke-width="1" stroke-dasharray="2 2" />
+          <line x1="500" y1="290" x2="430" y2="240" stroke="#00F59B" stroke-width="1" stroke-dasharray="2 2" />
+          <line x1="680" y1="180" x2="750" y2="120" stroke="#FF9500" stroke-width="1" stroke-dasharray="2 2" />
+        </g>
+
+      </svg>
+    </div>
+
+    <!-- ==================================================================
+         HUD CARD LATERAL FLUTUANTE (MODO INSPEÇÃO PROFUNDA)
+         ================================================================== -->
+    <aside class="hud-side-card" id="hud-side-card">
+      <div class="hud-header">
+        <div class="hud-header-left">
+          <img src="logo.png" alt="Logo" class="hud-logo-mini">
+          <div class="hud-title-wrap">
+            <h3 id="hud-card-title">Módulo Selecionado</h3>
+            <p id="hud-card-subtitle">Inspeção Detalhada do Subsistema</p>
+          </div>
+        </div>
+        <button class="hud-close-btn" id="hud-close-btn" title="Retornar ao Panorama (ESC)">✕</button>
+      </div>
+
+      <div class="hud-body">
+        <!-- Badges de Pinos e Conexões Físicas -->
+        <div class="hud-badges-row" id="hud-card-badge"></div>
+
+        <!-- Bloco de Fórmulas Matemáticas com KaTeX -->
+        <div id="hud-formula-box"></div>
+
+        <!-- Painel de Métricas e Controles Dinâmicos -->
+        <div id="hud-dynamic-content"></div>
+
+        <!-- Botão de Retorno -->
+        <button class="hud-return-btn" onclick="document.getElementById('hud-close-btn').click();">
+          ← Retornar ao Panorama Geral (ESC)
+        </button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ====================================================================
+       BARRA INFERIOR DE CONTROLES & TELEMETRIA
+       ==================================================================== -->
+  <footer class="twin-bottom-bar">
+
+    <!-- Controle Interativo de Cadência (Bancada de Testes) -->
+    <div class="control-cadence">
+      <div class="label-wrap">
+        <span class="label">CADÊNCIA DO CICLISTA:</span>
+        <span class="display" id="cadence-display-val">75 RPM</span>
+      </div>
+      <input type="range" min="0" max="140" value="75" class="cadence-range" id="cadence-slider" title="Ajuste a rotação do pedal">
+    </div>
+
+    <!-- Mini Osciloscópio em Tempo Real -->
+    <div class="oscilloscope-box">
+      <div class="oscilloscope-header">
+        <span>OSCILOSCÓPIO: <span class="cyan">■ Tensão (V)</span> • <span class="emerald">■ Potência (W)</span></span>
+        <span>Amostragem: 300 ms</span>
+      </div>
+      <canvas id="telemetry-sparkline" width="220" height="42"></canvas>
+    </div>
+
+    <!-- Ativação Rápida de Cargas Resistivas & Torque de Lenz -->
+    <div class="bottom-loads-section">
+      <span class="section-label">BANCO DE CARGAS (G5):</span>
+      <button class="load-quick-btn" id="btn-load-1" title="Chaveia Carga 1 (Relé GPIO 25)">
+        <span class="dot"></span> C1: 10W
+      </button>
+      <button class="load-quick-btn" id="btn-load-2" title="Chaveia Carga 2 (MOSFET GPIO 26)">
+        <span class="dot"></span> C2: 15W
+      </button>
+      <button class="load-quick-btn" id="btn-load-3" title="Chaveia Carga 3 (MOSFET GPIO 32)">
+        <span class="dot"></span> C3: 25W
+      </button>
+
+      <!-- Barra de Peso/Torque Opositor -->
+      <div style="min-width: 140px; margin-left: 6px;">
+        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; margin-bottom: 2px;">
+          <span style="color: var(--text-dim); font-weight: 700;">TORQUE LENZ:</span>
+          <span id="lenz-torque-label" style="font-weight: 700; color: var(--accent-emerald);">Livre</span>
+        </div>
+        <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
+          <div id="lenz-torque-bar" style="height: 100%; width: 0%; background: var(--accent-emerald); transition: width 0.3s ease;"></div>
+        </div>
+      </div>
+    </div>
+
+  </footer>
+
+  <!-- Script Principal de Inicialização dos Módulos ES6 -->
+  <script type="module">
+    import { CameraController } from './js/camera.js';
+    import { TelemetryService } from './js/telemetry.js';
+    import { TwinSvgRenderer } from './js/twin-svg.js';
+    import { TwinUIManager } from './js/twin-ui.js';
+
+    window.addEventListener('DOMContentLoaded', () => {
+      console.log('🚀 Inicializando Puraquê Blue Twin...');
+
+      const camera = new CameraController('bike-twin-svg');
+      const telemetry = new TelemetryService();
+      const svgRenderer = new TwinSvgRenderer('bike-twin-svg');
+      const ui = new TwinUIManager(camera, telemetry, svgRenderer);
+
+      // Expor para depuração no console
+      window.PuraqueTwin = { camera, telemetry, svgRenderer, ui };
+      console.log('✅ Puraquê Blue Twin pronto! Pressione 1, 2, 3, 4 ou clique nos hotspots.');
+    });
+  </script>
+
+</body>
+</html>

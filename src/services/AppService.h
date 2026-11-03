@@ -4,12 +4,12 @@
 #include <WebServer.h>
 #include <LittleFS.h>
 
-class WebAppService {
+class AppService {
 private:
     WebServer* server;
 
 public:
-    explicit WebAppService(WebServer& webServer);
+    explicit AppService(WebServer& webServer);
 
     void begin();
 

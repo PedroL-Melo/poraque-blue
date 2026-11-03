@@ -1,11 +1,11 @@
-#include "services/WebAppService.h"
+#include "services/AppService.h"
 
-WebAppService::WebAppService(WebServer& webServer) {
+AppService::AppService(WebServer& webServer) {
     server = &webServer;
 }
 
 
-void WebAppService::begin() {
+void AppService::begin() {
 
     if (!LittleFS.begin(true)) {
         Serial.println("Erro ao inicializar LittleFS!");
@@ -23,7 +23,7 @@ void WebAppService::begin() {
 
 }
 
-void WebAppService::handleClient() {
+void AppService::handleClient() {
 
     server->handleClient();
 

@@ -1,3 +1,4 @@
+#include <LittleFS.h>
 #include "services/AppService.h"
 
 AppService::AppService(WebServer& webServer) {
@@ -18,8 +19,9 @@ void AppService::begin() {
         server->send(302, "text/plain", "");
     });
     server->serveStatic("/", LittleFS, "/");
+
     server->begin();
-    Serial.println("Servidor HTTP iniciado!");  
+    Serial.println("\nServidor HTTP iniciado!");  
 
 }
 

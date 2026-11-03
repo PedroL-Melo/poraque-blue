@@ -17,8 +17,13 @@ bool WifiService::connect() {
     }
     Serial.println("\nConectado!\n");
 
+    Serial.print("REDE: ");
+    Serial.println(ssid);
     Serial.print("IP: ");
     Serial.println(WiFi.localIP().toString());
+    Serial.print("Link do App: http://");
+    Serial.print(WiFi.localIP().toString());
+    Serial.println("/\n");
 
     return true;
 

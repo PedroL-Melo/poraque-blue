@@ -5,8 +5,7 @@
 #include "services/AppService.h"
 
 WifiService wifi(WIFI_SSID, WIFI_PASSWORD);
-WebServer server(80);
-AppService webApp(server);
+AppService webApp(80);
 
 void setup() {
 

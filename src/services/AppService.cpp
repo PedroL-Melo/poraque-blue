@@ -1,13 +1,11 @@
 #include <LittleFS.h>
 #include "services/AppService.h"
 
-AppService::AppService(WebServer& webServer) {
-    server = &webServer;
+AppService::AppService(uint16_t port) {
+    server = new WebServer(port);
 }
 
-
 void AppService::begin() {
-
     if (!LittleFS.begin(true)) {
         Serial.println("Erro ao inicializar LittleFS!");
         return;
@@ -21,12 +19,9 @@ void AppService::begin() {
     server->serveStatic("/", LittleFS, "/");
 
     server->begin();
-    Serial.println("\nServidor HTTP iniciado!");  
-
+    Serial.println("\nServidor HTTP iniciado!");
 }
 
 void AppService::handleClient() {
-
     server->handleClient();
-
 }

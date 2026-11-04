@@ -9,7 +9,7 @@ private:
     WebServer* server;
 
 public:
-    explicit AppService(WebServer& webServer);
+    explicit AppService(uint16_t port);
 
     void begin();
 

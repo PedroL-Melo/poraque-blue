@@ -1,46 +1,62 @@
 #include "services/WifiService.h"
 
-WifiService::WifiService(const char* ssid, const char* password) {
+WifiService::WifiService(
+    const char* ssid,
+    const char* password,
+    IPAddress localIP,
+    IPAddress gateway,
+    IPAddress subnet
+) {
     this->ssid = ssid;
     this->password = password;
+
+    this->localIP = localIP;
+    this->gateway = gateway;
+    this->subnet = subnet;
 }
 
 bool WifiService::connect() {
 
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
+    WiFi.mode(WIFI_AP);
 
-    Serial.print("Conectando ao Wi-Fi");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+    if (!WiFi.softAPConfig(localIP, gateway, subnet)) {
+        Serial.println("Erro ao configurar IP da rede!");
+        return false;
     }
-    Serial.println("\nConectado!\n");
+
+    if (!WiFi.softAP(ssid, password)) {
+        Serial.println("Erro ao iniciar Access Point!");
+        return false;
+    }
+
+    Serial.println("\nPonto de acesso iniciado!\n");
 
     Serial.print("REDE: ");
     Serial.println(ssid);
     Serial.print("IP: ");
-    Serial.println(WiFi.localIP().toString());
-    Serial.print("Link do App: http://");
-    Serial.print(WiFi.localIP().toString());
-    Serial.println("/\n");
+    Serial.println(getIP());
+    Serial.println();
+
+    Serial.printf("Link do Site: http://%s/app/\n", getIP());
+    Serial.printf("Link da API: http://%s/api/\n", getIP());
 
     return true;
-
 }
 
 void WifiService::disconnect() {
-    WiFi.disconnect();
+    WiFi.softAPdisconnect(true);
+    WiFi.mode(WIFI_OFF);
 }
 
 bool WifiService::isConnected() {
-    return WiFi.status() == WL_CONNECTED;
+    return WiFi.getMode() == WIFI_AP &&
+           WiFi.softAPgetStationNum() > 0;
 }
 
 String WifiService::getIP() {
-    return WiFi.localIP().toString();
+    return WiFi.softAPIP().toString();
 }
 
-int WifiService::getRSSI() {
-    return WiFi.RSSI();
+int WifiService::getClientsCount() {
+    return WiFi.softAPgetStationNum();
 }

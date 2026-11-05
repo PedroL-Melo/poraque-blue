@@ -12,11 +12,11 @@ void AppService::begin() {
     }
     Serial.println("LittleFS inicializado!");
 
-    server->on("/", HTTP_GET, [this]() {
-        server->sendHeader("Location", "/index.html");
+    server->onNotFound([this]() {
+        server->sendHeader("Location", "/app/index.html");
         server->send(302, "text/plain", "");
-    });
-    server->serveStatic("/", LittleFS, "/");
+    }); 
+    server->serveStatic("/app/", LittleFS, "/");
 
     server->begin();
     Serial.println("\nServidor HTTP iniciado!");

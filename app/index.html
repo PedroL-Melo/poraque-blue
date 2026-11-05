@@ -14,11 +14,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  
-  <!-- KaTeX para Renderização de Fórmulas de Física Aplicada -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" crossorigin="anonymous">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -155,11 +150,31 @@
             <stop offset="60%" stop-color="#0f172a" />
             <stop offset="100%" stop-color="#020617" />
           </radialGradient>
+
+          <!-- Gradientes Radiais de Calor GPU (Zero custo de Blur) -->
+          <radialGradient id="hot-radial-amber" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF9500" stop-opacity="0.85" />
+            <stop offset="65%" stop-color="#FF9500" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="#FF9500" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="hot-radial-orange" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF6F00" stop-opacity="0.85" />
+            <stop offset="65%" stop-color="#FF6F00" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="#FF6F00" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="hot-radial-crimson" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF3366" stop-opacity="0.85" />
+            <stop offset="65%" stop-color="#FF3366" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="#FF3366" stop-opacity="0" />
+          </radialGradient>
         </defs>
 
-        <!-- Retângulo de Fundo para Capturar Cliques de Deseleção -->
+        <!-- Retângulo de Fundo e Grade -->
         <rect id="svg-background-rect" x="0" y="0" width="1000" height="600" fill="transparent" />
         <rect x="0" y="0" width="1000" height="600" fill="url(#grid-pattern)" pointer-events="none" />
+
+        <!-- GRUPO MESTRE DE CÂMERA ACELERADO POR GPU -->
+        <g id="camera-stage">
 
         <!-- Base / Suportes de Chão da Bicicleta Ergométrica -->
         <g id="bike-base-stand" stroke="#334155" stroke-width="8" stroke-linecap="round">
@@ -183,7 +198,7 @@
           <circle class="alt-flux-ring" cx="230" cy="390" r="135" fill="none" stroke="#00E5FF" stroke-width="0.8" stroke-dasharray="12 12" opacity="0.1" />
 
           <!-- Carcaça Estator do Alternador -->
-          <circle cx="230" cy="390" r="82" fill="url(#alt-radial)" stroke="#38bdf8" stroke-width="3" filter="url(#glow-blue)" />
+          <circle cx="230" cy="390" r="82" fill="url(#alt-radial)" stroke="#38bdf8" stroke-width="3" />
           <circle cx="230" cy="390" r="70" fill="none" stroke="#1e293b" stroke-width="6" />
 
           <!-- Bobinas do Estator (Cobre/Âmbar) -->
@@ -223,7 +238,7 @@
         <!-- ================================================================
              QUADRO DA BICICLETA ERGOMÉTRICA (ELECTRIC BLUE #1D63FF)
              ================================================================ -->
-        <g id="bike-frame" stroke="url(#frame-gradient)" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-blue)">
+        <g id="bike-frame" stroke="url(#frame-gradient)" stroke-linecap="round" stroke-linejoin="round">
           <!-- Chainstay: Traseira -> Movimento Central -->
           <line x1="230" y1="390" x2="460" y2="390" stroke-width="14" />
           <!-- Seatstay: Traseira -> Base do Selim -->
@@ -309,11 +324,11 @@
 
           <!-- Linha de Pulso de Fluxo de Corrente Animada -->
           <path id="current-flux-line" d="M 270 335 L 420 375 L 490 305 L 670 195" 
-                fill="none" stroke="#00E5FF" stroke-width="2" class="flux-dash" opacity="0.85" filter="url(#glow-cyan)" />
+                fill="none" stroke="#00E5FF" stroke-width="2" class="flux-dash" opacity="0.85" />
 
           <!-- Linha de Alimentação USB 5,0V (ESP32 / LM2596 -> Guidão Cockpit) -->
           <path id="usb-5v-line" d="M 525 285 Q 590 230 655 190" 
-                fill="none" stroke="#00F59B" stroke-width="2.5" stroke-dasharray="3 3" filter="url(#glow-emerald)" />
+                fill="none" stroke="#00F59B" stroke-width="2.5" stroke-dasharray="3 3" />
         </g>
 
         <!-- ================================================================
@@ -321,7 +336,7 @@
              ================================================================ -->
         <g id="subsystem-esp32-buck" class="subsystem-group">
           <!-- Caixa Protetora no Tubo Central -->
-          <rect x="470" y="260" width="65" height="58" rx="6" fill="#080e1e" stroke="#1D63FF" stroke-width="2" filter="url(#glow-blue)" />
+          <rect x="470" y="260" width="65" height="58" rx="6" fill="#080e1e" stroke="#1D63FF" stroke-width="2" />
           
           <!-- Indutor e Capacitores do LM2596 Step-Down -->
           <circle cx="488" cy="278" r="9" fill="#1e293b" stroke="#00F59B" stroke-width="1.5" />
@@ -354,17 +369,17 @@
           <line x1="703" y1="152" x2="703" y2="157" stroke="#475569" stroke-width="2" />
 
           <!-- Resistor Cerâmico 1 (10W - Relé GPIO 25) -->
-          <circle id="resistor-1-glow" cx="660" cy="178" r="14" fill="#FF9500" opacity="0.0" filter="url(#glow-hot)" />
+          <circle id="resistor-1-glow" cx="660" cy="178" r="18" fill="url(#hot-radial-amber)" opacity="0.0" />
           <rect id="resistor-1-body" x="654" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
           <text x="660" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">10W</text>
 
           <!-- Resistor Cerâmico 2 (15W - MOSFET GPIO 26) -->
-          <circle id="resistor-2-glow" cx="680" cy="178" r="14" fill="#FF6F00" opacity="0.0" filter="url(#glow-hot)" />
+          <circle id="resistor-2-glow" cx="680" cy="178" r="18" fill="url(#hot-radial-orange)" opacity="0.0" />
           <rect id="resistor-2-body" x="674" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
           <text x="680" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">15W</text>
 
           <!-- Resistor Cerâmico 3 (25W - MOSFET GPIO 32) -->
-          <circle id="resistor-3-glow" cx="700" cy="178" r="14" fill="#FF3366" opacity="0.0" filter="url(#glow-hot)" />
+          <circle id="resistor-3-glow" cx="700" cy="178" r="18" fill="url(#hot-radial-crimson)" opacity="0.0" />
           <rect id="resistor-3-body" x="694" y="166" width="12" height="24" rx="2" fill="#334155" stroke="#475569" stroke-width="1.2" />
           <text x="700" y="198" font-size="6.5" fill="#94a3b8" font-family="monospace" text-anchor="middle">25W</text>
 
@@ -379,8 +394,9 @@
 
         <!-- HOTSPOT 1: Sensor Hall & RPM (460, 390) -->
         <g id="hotspot-hall" class="hotspot-node">
+          <circle class="hotspot-touch-area" cx="460" cy="390" r="42" fill="transparent" />
           <circle class="hotspot-ring" cx="460" cy="390" r="14" fill="none" stroke="#00E5FF" stroke-width="2" />
-          <circle class="hotspot-core" cx="460" cy="390" r="8" fill="#00E5FF" filter="url(#glow-cyan)" />
+          <circle class="hotspot-core" cx="460" cy="390" r="8" fill="#00E5FF" />
           <!-- Pill Badge -->
           <rect x="420" y="420" width="80" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#00E5FF" stroke-width="1" />
           <text class="hotspot-pill-badge" x="460" y="432" text-anchor="middle">G1: SENSOR</text>
@@ -388,8 +404,9 @@
 
         <!-- HOTSPOT 2: Alternador & Indução (230, 390) -->
         <g id="hotspot-alt" class="hotspot-node">
+          <circle class="hotspot-touch-area" cx="230" cy="390" r="45" fill="transparent" />
           <circle class="hotspot-ring" cx="230" cy="390" r="14" fill="none" stroke="#38bdf8" stroke-width="2" />
-          <circle class="hotspot-core" cx="230" cy="390" r="8" fill="#38bdf8" filter="url(#glow-cyan)" />
+          <circle class="hotspot-core" cx="230" cy="390" r="8" fill="#38bdf8" />
           <!-- Pill Badge -->
           <rect x="180" y="420" width="100" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#38bdf8" stroke-width="1" />
           <text class="hotspot-pill-badge" x="230" y="432" text-anchor="middle">G3: ALTERNADOR</text>
@@ -397,8 +414,9 @@
 
         <!-- HOTSPOT 3: Buck LM2596 & ESP32 (500, 290) -->
         <g id="hotspot-esp" class="hotspot-node">
+          <circle class="hotspot-touch-area" cx="500" cy="290" r="42" fill="transparent" />
           <circle class="hotspot-ring" cx="500" cy="290" r="14" fill="none" stroke="#00F59B" stroke-width="2" />
-          <circle class="hotspot-core" cx="500" cy="290" r="8" fill="#00F59B" filter="url(#glow-emerald)" />
+          <circle class="hotspot-core" cx="500" cy="290" r="8" fill="#00F59B" />
           <!-- Pill Badge -->
           <rect x="460" y="235" width="80" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#00F59B" stroke-width="1" />
           <text class="hotspot-pill-badge" x="500" y="247" text-anchor="middle">G2: ESP32</text>
@@ -406,8 +424,9 @@
 
         <!-- HOTSPOT 4: Banco de Cargas & Torque de Lenz (680, 180) -->
         <g id="hotspot-loads" class="hotspot-node">
+          <circle class="hotspot-touch-area" cx="680" cy="180" r="42" fill="transparent" />
           <circle class="hotspot-ring" cx="680" cy="180" r="14" fill="none" stroke="#FF9500" stroke-width="2" />
-          <circle class="hotspot-core" cx="680" cy="180" r="8" fill="#FF9500" filter="url(#glow-hot)" />
+          <circle class="hotspot-core" cx="680" cy="180" r="8" fill="#FF9500" />
           <!-- Pill Badge -->
           <rect x="635" y="115" width="90" height="18" rx="9" fill="rgba(6, 11, 25, 0.9)" stroke="#FF9500" stroke-width="1" />
           <text class="hotspot-pill-badge" x="680" y="127" text-anchor="middle">G5: CARGAS</text>
@@ -421,37 +440,271 @@
           <line x1="680" y1="180" x2="750" y2="120" stroke="#FF9500" stroke-width="1" stroke-dasharray="2 2" />
         </g>
 
+        </g><!-- Fim do #camera-stage -->
       </svg>
     </div>
 
     <!-- ==================================================================
-         HUD CARD LATERAL FLUTUANTE (MODO INSPEÇÃO PROFUNDA)
+         HUD CARD LATERAL (EDGE-DOCKED COM BORDER-RADIUS NAS PONTAS)
          ================================================================== -->
     <aside class="hud-side-card" id="hud-side-card">
+      <!-- Aba lateral curva para espiar a bicicleta sem sair do zoom -->
+      <button class="hud-peek-tab" id="hud-peek-btn" title="Recolher / Expandir Card Lateral">›</button>
+
       <div class="hud-header">
         <div class="hud-header-left">
           <img src="logo.png" alt="Logo" class="hud-logo-mini">
           <div class="hud-title-wrap">
             <h3 id="hud-card-title">Módulo Selecionado</h3>
-            <p id="hud-card-subtitle">Inspeção Detalhada do Subsistema</p>
+            <p id="hud-card-subtitle">Inspeção do Subsistema</p>
           </div>
         </div>
         <button class="hud-close-btn" id="hud-close-btn" title="Retornar ao Panorama (ESC)">✕</button>
       </div>
 
       <div class="hud-body">
-        <!-- Badges de Pinos e Conexões Físicas -->
-        <div class="hud-badges-row" id="hud-card-badge"></div>
 
-        <!-- Bloco de Fórmulas Matemáticas com KaTeX -->
-        <div id="hud-formula-box"></div>
+        <!-- ==============================================================
+             PAINEL PRÉ-MONTADO 1: MÓDULO G1 (SENSOR HALL & RPM)
+             ============================================================== -->
+        <div class="hud-module-panel" id="panel-TARGET_HALL">
+          <div class="hud-badges-row">
+            <span class="chip chip-blue">GPIO 27</span>
+            <span class="chip">EXT_INT (IRAM_ATTR)</span>
+            <span class="chip">5 Ímãs Neodímio</span>
+          </div>
 
-        <!-- Painel de Métricas e Controles Dinâmicos -->
-        <div id="hud-dynamic-content"></div>
+          <div class="formula-block">
+            <div class="formula-title">INDUÇÃO DE PULSOS & ROTAÇÃO</div>
+            <div class="math-eq-row">
+              <div class="math-eq">
+                <span class="m-var">RPM</span>
+                <span class="m-op">=</span>
+                <span class="m-frac">
+                  <span class="m-num">n</span>
+                  <span class="m-den">&Delta;t &middot; N<sub>pulsos</sub></span>
+                </span>
+                <span class="m-op">&times;</span>
+                <span class="m-num-const">60</span>
+              </div>
+              <div class="math-eq">
+                <span class="m-var">f</span>
+                <span class="m-op">=</span>
+                <span class="m-frac">
+                  <span class="m-num">n</span>
+                  <span class="m-den">&Delta;t</span>
+                </span>
+                <span class="m-unit">[Hz]</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-stats-grid">
+            <div class="hud-stat-item">
+              <span class="label">CADÊNCIA</span>
+              <span class="val cyan" id="hud-rpm-val">75 RPM</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">FREQUÊNCIA</span>
+              <span class="val blue" id="hud-freq-val">6.3 Hz</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">PERÍODO (T)</span>
+              <span class="val" id="hud-period-val">160.0 ms</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">AMOSTRAGEM</span>
+              <span class="val green">ISR Hardware</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             PAINEL PRÉ-MONTADO 2: MÓDULO G3 (ALTERNADOR & INSTRUMENTAÇÃO)
+             ============================================================== -->
+        <div class="hud-module-panel" id="panel-TARGET_ALT">
+          <div class="hud-badges-row">
+            <span class="chip chip-blue">GPIO 34 (ADC1)</span>
+            <span class="chip chip-cyan">INA219 (I2C)</span>
+            <span class="chip">68k&Omega; / 10k&Omega;</span>
+          </div>
+
+          <div class="formula-block">
+            <div class="formula-title">LEI DE FARADAY-LENZ & POTÊNCIA CC</div>
+            <div class="math-eq-row">
+              <div class="math-eq">
+                <span class="m-var">&Epsilon;</span>
+                <span class="m-op">= &minus;</span>
+                <span class="m-frac">
+                  <span class="m-num">d&Phi;</span>
+                  <span class="m-den">dt</span>
+                </span>
+              </div>
+              <div class="math-eq">
+                <span class="m-var">P</span>
+                <span class="m-op">=</span>
+                <span class="m-var">U &middot; I</span>
+              </div>
+              <div class="math-eq">
+                <span class="m-var">V<sub>real</sub></span>
+                <span class="m-op">=</span>
+                <span class="m-var">V<sub>adc</sub></span>
+                <span class="m-op">&middot;</span>
+                <span class="m-frac">
+                  <span class="m-num">R<sub>1</sub> + R<sub>2</sub></span>
+                  <span class="m-den">R<sub>2</sub></span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-stats-grid">
+            <div class="hud-stat-item">
+              <span class="label">TENSÃO CC</span>
+              <span class="val cyan" id="hud-v-val">15.20 V</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">CORRENTE</span>
+              <span class="val blue" id="hud-i-val">1.45 A</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">POTÊNCIA ATIVA</span>
+              <span class="val green" id="hud-p-val">22.0 W</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">FILTRO DIGITAL</span>
+              <span class="val">Média O(1)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             PAINEL PRÉ-MONTADO 3: MÓDULO G2 (BUCK LM2596 & ESP32)
+             ============================================================== -->
+        <div class="hud-module-panel" id="panel-TARGET_ESP">
+          <div class="hud-badges-row">
+            <span class="chip chip-green">LM2596 (5.0V)</span>
+            <span class="chip chip-blue">ESP32 Wi-Fi</span>
+            <span class="chip">Saída USB</span>
+          </div>
+
+          <div class="formula-block">
+            <div class="formula-title">EFICIÊNCIA BUCK & INTEGRAÇÃO DE ENERGIA</div>
+            <div class="math-eq-row">
+              <div class="math-eq">
+                <span class="m-var">&eta;</span>
+                <span class="m-op">=</span>
+                <span class="m-frac">
+                  <span class="m-num">P<sub>out</sub></span>
+                  <span class="m-den">P<sub>in</sub></span>
+                </span>
+              </div>
+              <div class="math-eq">
+                <span class="m-var">E</span>
+                <span class="m-op">&approx; &sum;</span>
+                <span class="m-var">P<sub>k</sub> &middot; &Delta;t</span>
+                <span class="m-unit">[J]</span>
+              </div>
+              <div class="math-eq">
+                <span class="m-var">E<sub>Wh</sub></span>
+                <span class="m-op">=</span>
+                <span class="m-frac">
+                  <span class="m-num">E</span>
+                  <span class="m-den">3600</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-stats-grid">
+            <div class="hud-stat-item">
+              <span class="label">SAÍDA USB</span>
+              <span class="val green">5.00 V CC</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">TRABALHO (J)</span>
+              <span class="val cyan" id="hud-joules-val">0 J</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">ENERGIA (Wh)</span>
+              <span class="val blue" id="hud-wh-val">0.000 Wh</span>
+            </div>
+            <div class="hud-stat-item">
+              <span class="label">CALORIAS</span>
+              <span class="val orange" id="hud-kcal-val">0.00 kcal</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==============================================================
+             PAINEL PRÉ-MONTADO 4: MÓDULO G5 (BANCO DE CARGAS & LENZ)
+             ============================================================== -->
+        <div class="hud-module-panel" id="panel-TARGET_LOADS">
+          <div class="hud-badges-row">
+            <span class="chip chip-orange">GPIO 25 (10W)</span>
+            <span class="chip chip-orange">GPIO 26 (15W)</span>
+            <span class="chip chip-orange">GPIO 32 (25W)</span>
+          </div>
+
+          <div class="formula-block">
+            <div class="formula-title">EFEITO JOULE & ASSOCIAÇÃO EM PARALELO</div>
+            <div class="math-eq-row">
+              <div class="math-eq">
+                <span class="m-var">P<sub>dissipada</sub></span>
+                <span class="m-op">=</span>
+                <span class="m-frac">
+                  <span class="m-num">U<sup>2</sup></span>
+                  <span class="m-den">R<sub>eq</sub></span>
+                </span>
+              </div>
+              <div class="math-eq">
+                <span class="m-frac">
+                  <span class="m-num">1</span>
+                  <span class="m-den">R<sub>eq</sub></span>
+                </span>
+                <span class="m-op">= &sum;</span>
+                <span class="m-frac">
+                  <span class="m-num">1</span>
+                  <span class="m-den">R<sub>i</sub></span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hud-torque-box">
+            <div class="torque-header">
+              <span>CONTRA-TORQUE DE LENZ:</span>
+              <strong id="hud-lenz-val">Livre (0W)</strong>
+            </div>
+            <div class="torque-meter">
+              <div class="torque-bar-fill" id="hud-lenz-bar" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="hud-loads-panel">
+            <div class="hud-load-btn-row">
+              <button class="load-toggle-btn" id="hud-load-btn-1">
+                <span class="lamp-indicator"></span>
+                <span class="text">Carga 1 (10W - Relé)</span>
+                <span class="code">GPIO 25</span>
+              </button>
+              <button class="load-toggle-btn" id="hud-load-btn-2">
+                <span class="lamp-indicator"></span>
+                <span class="text">Carga 2 (15W - MOSFET)</span>
+                <span class="code">GPIO 26</span>
+              </button>
+              <button class="load-toggle-btn" id="hud-load-btn-3">
+                <span class="lamp-indicator"></span>
+                <span class="text">Carga 3 (25W - MOSFET)</span>
+                <span class="code">GPIO 32</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         <!-- Botão de Retorno -->
-        <button class="hud-return-btn" onclick="document.getElementById('hud-close-btn').click();">
-          ← Retornar ao Panorama Geral (ESC)
+        <button class="hud-return-btn" id="hud-return-overview-btn">
+          ← Visão Panorâmica (ESC)
         </button>
       </div>
     </aside>
@@ -484,24 +737,26 @@
     <!-- Ativação Rápida de Cargas Resistivas & Torque de Lenz -->
     <div class="bottom-loads-section">
       <span class="section-label">BANCO DE CARGAS (G5):</span>
-      <button class="load-quick-btn" id="btn-load-1" title="Chaveia Carga 1 (Relé GPIO 25)">
-        <span class="dot"></span> C1: 10W
-      </button>
-      <button class="load-quick-btn" id="btn-load-2" title="Chaveia Carga 2 (MOSFET GPIO 26)">
-        <span class="dot"></span> C2: 15W
-      </button>
-      <button class="load-quick-btn" id="btn-load-3" title="Chaveia Carga 3 (MOSFET GPIO 32)">
-        <span class="dot"></span> C3: 25W
-      </button>
+      <div class="bottom-loads-buttons">
+        <button class="load-quick-btn" id="btn-load-1" title="Chaveia Carga 1 (Relé GPIO 25)">
+          <span class="dot"></span> C1: 10W
+        </button>
+        <button class="load-quick-btn" id="btn-load-2" title="Chaveia Carga 2 (MOSFET GPIO 26)">
+          <span class="dot"></span> C2: 15W
+        </button>
+        <button class="load-quick-btn" id="btn-load-3" title="Chaveia Carga 3 (MOSFET GPIO 32)">
+          <span class="dot"></span> C3: 25W
+        </button>
+      </div>
 
       <!-- Barra de Peso/Torque Opositor -->
-      <div style="min-width: 140px; margin-left: 6px;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.65rem; margin-bottom: 2px;">
-          <span style="color: var(--text-dim); font-weight: 700;">TORQUE LENZ:</span>
-          <span id="lenz-torque-label" style="font-weight: 700; color: var(--accent-emerald);">Livre</span>
+      <div class="lenz-mini-meter">
+        <div class="lenz-mini-header">
+          <span class="lenz-mini-title">TORQUE LENZ:</span>
+          <span id="lenz-torque-label" class="lenz-mini-val">Livre</span>
         </div>
-        <div style="height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden;">
-          <div id="lenz-torque-bar" style="height: 100%; width: 0%; background: var(--accent-emerald); transition: width 0.3s ease;"></div>
+        <div class="lenz-mini-track">
+          <div id="lenz-torque-bar" class="lenz-mini-fill"></div>
         </div>
       </div>
     </div>
@@ -515,9 +770,11 @@
     import { TwinSvgRenderer } from './js/twin-svg.js';
     import { TwinUIManager } from './js/twin-ui.js';
 
-    window.addEventListener('DOMContentLoaded', () => {
-      console.log('🚀 Inicializando Puraquê Blue Twin...');
+    function initTwin() {
+      if (window.__twinInitialized) return;
+      window.__twinInitialized = true;
 
+      console.log('🚀 Inicializando Puraquê Blue Twin...');
       const camera = new CameraController('bike-twin-svg');
       const telemetry = new TelemetryService();
       const svgRenderer = new TwinSvgRenderer('bike-twin-svg');
@@ -526,7 +783,13 @@
       // Expor para depuração no console
       window.PuraqueTwin = { camera, telemetry, svgRenderer, ui };
       console.log('✅ Puraquê Blue Twin pronto! Pressione 1, 2, 3, 4 ou clique nos hotspots.');
-    });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTwin);
+    } else {
+      initTwin();
+    }
   </script>
 
 </body>

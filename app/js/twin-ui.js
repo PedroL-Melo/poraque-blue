@@ -1,7 +1,7 @@
 /**
  * ============================================================================
  * PURAQUÊ BLUE TWIN - TwinUIManager
- * Gerenciador de Interface, Máquina de Estados, Cartões HUD e Controles
+ * Gerenciador de Interface, Máquina de Estados, Cartões HUD Pré-Montados e Controles
  * ============================================================================
  */
 
@@ -78,14 +78,32 @@ export class TwinUIManager {
     this.connectionBadge = document.getElementById('connection-badge');
     this.wifiRssiEl = document.getElementById('wifi-rssi-val');
 
-    // HUD Side Panel
+    // HUD Side Panel (Pré-montado para Zero-Allocation DOM Switch)
     this.hudSideCard = document.getElementById('hud-side-card');
     this.hudCardTitle = document.getElementById('hud-card-title');
     this.hudCardSubtitle = document.getElementById('hud-card-subtitle');
-    this.hudCardBadge = document.getElementById('hud-card-badge');
-    this.hudFormulaBox = document.getElementById('hud-formula-box');
-    this.hudDynamicContent = document.getElementById('hud-dynamic-content');
     this.hudCloseBtn = document.getElementById('hud-close-btn');
+    this.hudReturnBtn = document.getElementById('hud-return-overview-btn');
+    this.hudPeekBtn = document.getElementById('hud-peek-btn');
+    this.hudModulePanels = document.querySelectorAll('.hud-module-panel');
+
+    // Elementos de telemetria cacheados dentro dos painéis do HUD
+    this.hudRpmVal = document.getElementById('hud-rpm-val');
+    this.hudFreqVal = document.getElementById('hud-freq-val');
+    this.hudPeriodVal = document.getElementById('hud-period-val');
+    this.hudVVal = document.getElementById('hud-v-val');
+    this.hudIVal = document.getElementById('hud-i-val');
+    this.hudPVal = document.getElementById('hud-p-val');
+    this.hudJoulesVal = document.getElementById('hud-joules-val');
+    this.hudWhVal = document.getElementById('hud-wh-val');
+    this.hudKcalVal = document.getElementById('hud-kcal-val');
+    this.hudLenzVal = document.getElementById('hud-lenz-val');
+    this.hudLenzBar = document.getElementById('hud-lenz-bar');
+
+    // Botões de Cargas dentro do HUD Lateral
+    this.hudLoadBtn1 = document.getElementById('hud-load-btn-1');
+    this.hudLoadBtn2 = document.getElementById('hud-load-btn-2');
+    this.hudLoadBtn3 = document.getElementById('hud-load-btn-3');
 
     // Botões de Navegação Superior
     this.navPills = document.querySelectorAll('.nav-pill-target');
@@ -94,7 +112,7 @@ export class TwinUIManager {
     this.cadenceSlider = document.getElementById('cadence-slider');
     this.cadenceDisplay = document.getElementById('cadence-display-val');
 
-    // Botões de Cargas
+    // Botões de Cargas da Barra Inferior
     this.btnLoad1 = document.getElementById('btn-load-1');
     this.btnLoad2 = document.getElementById('btn-load-2');
     this.btnLoad3 = document.getElementById('btn-load-3');
@@ -116,19 +134,89 @@ export class TwinUIManager {
 
     // Navegação pelos botões do topo
     this.navPills.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const targetId = btn.dataset.target;
         this.sound.zoom();
         this.camera.goTo(targetId);
       });
     });
 
-    // Clique no botão Fechar / Retornar do painel lateral
+    // Clique nos botões Fechar / Retornar do painel lateral
+    const handleReturnOverview = () => {
+      this.sound.click();
+      this.camera.resetOverview();
+    };
+
     if (this.hudCloseBtn) {
-      this.hudCloseBtn.addEventListener('click', () => {
+      this.hudCloseBtn.addEventListener('click', handleReturnOverview);
+    }
+    if (this.hudReturnBtn) {
+      this.hudReturnBtn.addEventListener('click', handleReturnOverview);
+    }
+
+    // Aba lateral "Espiar" (recolhe/expande o card na lateral da tela)
+    if (this.hudPeekBtn && this.hudSideCard) {
+      this.hudPeekBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
         this.sound.click();
-        this.camera.resetOverview();
+        const isCollapsed = this.hudSideCard.classList.toggle('peek-collapsed');
+        this.hudPeekBtn.textContent = isCollapsed ? '‹' : '›';
+        this.camera.setCardPeeked(isCollapsed);
       });
+    }
+
+    // Suporte a Gestos de Deslizar (Swipe) no HUD Lateral (Mobile & Touch)
+    if (this.hudSideCard) {
+      let touchStartX = 0;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+
+      this.hudSideCard.addEventListener(
+        'touchstart',
+        (e) => {
+          if (e.touches && e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = performance.now();
+          }
+        },
+        { passive: true }
+      );
+
+      this.hudSideCard.addEventListener(
+        'touchend',
+        (e) => {
+          if (!e.changedTouches || e.changedTouches.length === 0) return;
+          const touchEndX = e.changedTouches[0].clientX;
+          const touchEndY = e.changedTouches[0].clientY;
+          const deltaX = touchEndX - touchStartX;
+          const deltaY = touchEndY - touchStartY;
+          const elapsed = performance.now() - touchStartTime;
+
+          // Se o movimento foi predominantemente horizontal (|deltaX| > 1.5 * |deltaY|)
+          if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3 && elapsed < 500) {
+            // Deslizar para a direita (swipe right): recolhe o card para o canto da tela
+            if (deltaX > 0) {
+              if (!this.hudSideCard.classList.contains('peek-collapsed')) {
+                this.sound.click();
+                this.hudSideCard.classList.add('peek-collapsed');
+                if (this.hudPeekBtn) this.hudPeekBtn.textContent = '‹';
+                this.camera.setCardPeeked(true);
+              }
+            }
+            // Deslizar para a esquerda (swipe left): expande o card de volta
+            else if (deltaX < 0) {
+              if (this.hudSideCard.classList.contains('peek-collapsed')) {
+                this.sound.click();
+                this.hudSideCard.classList.remove('peek-collapsed');
+                if (this.hudPeekBtn) this.hudPeekBtn.textContent = '›';
+                this.camera.setCardPeeked(false);
+              }
+            }
+          }
+        },
+        { passive: true }
+      );
     }
 
     // Atalhos de teclado
@@ -160,7 +248,7 @@ export class TwinUIManager {
       });
     }
 
-    // Botões de Cargas Resistivas
+    // Botões de Cargas Resistivas (Barra Inferior + Painel HUD)
     const setupLoadBtn = (btn, key) => {
       if (!btn) return;
       btn.addEventListener('click', () => {
@@ -177,6 +265,10 @@ export class TwinUIManager {
     setupLoadBtn(this.btnLoad1, 'load_1_relay_25');
     setupLoadBtn(this.btnLoad2, 'load_2_mosfet_26');
     setupLoadBtn(this.btnLoad3, 'load_3_mosfet_32');
+
+    setupLoadBtn(this.hudLoadBtn1, 'load_1_relay_25');
+    setupLoadBtn(this.hudLoadBtn2, 'load_2_mosfet_26');
+    setupLoadBtn(this.hudLoadBtn3, 'load_3_mosfet_32');
 
     // Hotspots Clicáveis no SVG
     const hotspots = [
@@ -202,7 +294,6 @@ export class TwinUIManager {
     const svgEl = document.getElementById('bike-twin-svg');
     if (svgEl) {
       svgEl.addEventListener('click', (ev) => {
-        // Se clicar em um elemento sem ação específica, volta ao panorama
         if (ev.target.id === 'svg-background-rect' || ev.target.id === 'bike-twin-svg') {
           if (!this.camera.isGlobal()) {
             this.sound.click();
@@ -229,13 +320,25 @@ export class TwinUIManager {
   }
 
   bindCameraEvents() {
+    const viewportContainer = document.getElementById('viewport-container');
+
     this.camera.onChange((targetId, isFinished) => {
+      // Atualiza a UI imediatamente no início da transição (isFinished === false)
+      if (isFinished) return;
+
       const isGlobal = targetId === 'TARGET_GLOBAL';
 
-      // Atualiza botões do topo
+      if (viewportContainer) {
+        viewportContainer.classList.toggle('inspection-mode', !isGlobal);
+      }
+
+      // Atualiza botões do topo e centraliza a pílula ativa no scroll mobile
       this.navPills.forEach((btn) => {
         if (btn.dataset.target === targetId) {
           btn.classList.add('active');
+          if (typeof btn.scrollIntoView === 'function') {
+            btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          }
         } else {
           btn.classList.remove('active');
         }
@@ -244,8 +347,11 @@ export class TwinUIManager {
       // Avisa renderizador do SVG
       this.svgRenderer.setPanoramicState(isGlobal);
 
-      // Mostra ou esconde cartão lateral HUD
+      // Mostra ou esconde cartão lateral HUD (com reset do estado peek)
       if (this.hudSideCard) {
+        this.hudSideCard.classList.remove('peek-collapsed');
+        if (this.hudPeekBtn) this.hudPeekBtn.textContent = '›';
+
         if (isGlobal) {
           this.hudSideCard.classList.remove('open');
         } else {
@@ -281,12 +387,17 @@ export class TwinUIManager {
 
     // Atualiza estado do indicador de conexão
     if (this.connectionBadge) {
-      if (p.status.simulation) {
-        this.connectionBadge.className = 'status-pill simulated';
-        this.connectionBadge.innerHTML = `<span class="dot"></span> SIMULAÇÃO DE BANCADA`;
-      } else {
-        this.connectionBadge.className = 'status-pill online';
-        this.connectionBadge.innerHTML = `<span class="dot"></span> ESP32 ONLINE (${p.status.wifi_rssi} dBm)`;
+      const nextState = p.status.simulation ? 'simulated' : 'online';
+      if (this.connectionBadge.dataset.state !== nextState) {
+        this.connectionBadge.dataset.state = nextState;
+        this.connectionBadge.className = `status-pill ${nextState}`;
+      }
+      const labelText = p.status.simulation
+        ? 'SIMULAÇÃO DE BANCADA'
+        : `ESP32 ONLINE (${p.status.wifi_rssi} dBm)`;
+      if (this.connectionBadge.dataset.label !== labelText) {
+        this.connectionBadge.dataset.label = labelText;
+        this.connectionBadge.innerHTML = `<span class="dot"></span> ${labelText}`;
       }
     }
 
@@ -310,21 +421,23 @@ export class TwinUIManager {
   }
 
   renderLoadToggles(loads) {
+    if (!loads) return;
     const updateBtn = (btn, active) => {
       if (!btn) return;
-      if (active) {
-        btn.classList.add('active');
-      } else {
-        btn.classList.remove('active');
-      }
+      btn.classList.toggle('active', Boolean(active));
     };
     updateBtn(this.btnLoad1, loads.load_1_relay_25);
     updateBtn(this.btnLoad2, loads.load_2_mosfet_26);
     updateBtn(this.btnLoad3, loads.load_3_mosfet_32);
+
+    updateBtn(this.hudLoadBtn1, loads.load_1_relay_25);
+    updateBtn(this.hudLoadBtn2, loads.load_2_mosfet_26);
+    updateBtn(this.hudLoadBtn3, loads.load_3_mosfet_32);
   }
 
   /**
-   * Renderiza os dados físicos profundos do Módulo Ativo no HUD lateral
+   * Alterna instantaneamente os painéis pré-montados via classe CSS (.active)
+   * Zero reconstrução de DOM (innerHTML) = Zero micro-travamentos!
    */
   renderInspectionCard(targetId) {
     const target = CAMERA_TARGETS[targetId];
@@ -333,251 +446,46 @@ export class TwinUIManager {
     if (this.hudCardTitle) this.hudCardTitle.textContent = target.name;
     if (this.hudCardSubtitle) this.hudCardSubtitle.textContent = target.subtitle;
 
-    let pinHtml = '';
-    let formulaHtml = '';
-    let dynamicHtml = '';
+    const activePanelId = `panel-${targetId}`;
+    this.hudModulePanels.forEach((panel) => {
+      panel.classList.toggle('active', panel.id === activePanelId);
+    });
 
-    const p = this.telemetry.latestPacket || {
-      rpm: 0, frequency_hz: 0, voltage_v: 0, current_a: 0, power_w: 0,
-      joules_total: 0, watt_hours: 0, calories_kcal: 0
-    };
-
-    switch (targetId) {
-      case 'TARGET_HALL':
-        pinHtml = `<span class="chip chip-blue">GPIO 27</span> <span class="chip">EXT_INT (IRAM_ATTR)</span> <span class="chip">Efeito Hall / Encoder</span>`;
-        formulaHtml = `
-          <div class="formula-block">
-            <div class="formula-title">LEI DA INDUÇÃO DE FARADAY-LENZ & AMOSTRAGEM DE PULSOS</div>
-            <div class="formula-math">
-              $$\\text{RPM} = \\frac{n}{\\Delta t \\cdot N_{\\text{pulsos}}} \\times 60 \\qquad f = \\frac{n}{\\Delta t} \\text{ [Hz]}$$
-            </div>
-            <div class="formula-desc">A rotação dos ímãs de neodímio induz pulsos na bobina/sensor Hall, gerando interrupções no ESP32.</div>
-          </div>
-        `;
-        dynamicHtml = `
-          <div class="hud-stats-grid">
-            <div class="hud-stat-item">
-              <span class="label">CADÊNCIA (RPM)</span>
-              <span class="val cyan" id="hud-rpm-val">${p.rpm}</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">FREQUÊNCIA (Hz)</span>
-              <span class="val blue" id="hud-freq-val">${p.frequency_hz.toFixed(1)}</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">PERÍODO (T)</span>
-              <span class="val" id="hud-period-val">${p.frequency_hz > 0 ? (1000 / p.frequency_hz).toFixed(1) : 0} ms</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">PULSOS/VOLTA</span>
-              <span class="val green">5 ÍMÃS</span>
-            </div>
-          </div>
-          <div class="hud-info-alert">
-            <i class="icon">ℹ️</i>
-            <span>Interrupção rápida em RAM (IRAM_ATTR) sem latência de leitura analógica.</span>
-          </div>
-        `;
-        break;
-
-      case 'TARGET_ALT':
-        pinHtml = `<span class="chip chip-blue">GPIO 34 (ADC1_CH6)</span> <span class="chip chip-cyan">INA219 (I2C: 21, 22)</span> <span class="chip">GPIO 35 (ACS712)</span>`;
-        formulaHtml = `
-          <div class="formula-block">
-            <div class="formula-title">FORÇA ELETROMOTRIZ INDUZIDA & LEI DE OHM</div>
-            <div class="formula-math">
-              $$\\mathcal{E} = -\\frac{d\\Phi}{dt} \\qquad P = U \\cdot I \\qquad V_{\\text{real}} = V_{\\text{pino}} \\cdot \\left(\\frac{R_1 + R_2}{R_2}\\right)$$
-            </div>
-            <div class="formula-desc">Alternador automotivo trifásico retificado para 12V-18V CC. Divisor resistivo 68kΩ / 10kΩ.</div>
-          </div>
-        `;
-        dynamicHtml = `
-          <div class="hud-stats-grid">
-            <div class="hud-stat-item">
-              <span class="label">TENSÃO RETIFICADA</span>
-              <span class="val cyan" id="hud-v-val">${p.voltage_v.toFixed(2)} V</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">CORRENTE TOTAL</span>
-              <span class="val blue" id="hud-i-val">${p.current_a.toFixed(2)} A</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">POTÊNCIA ELÉTRICA</span>
-              <span class="val green" id="hud-p-val">${p.power_w.toFixed(1)} W</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">FILTRO DIGITAL</span>
-              <span class="val">Média Móvel O(1)</span>
-            </div>
-          </div>
-          <div class="hud-info-alert">
-            <i class="icon">⚡</i>
-            <span>Canal ADC1 puro ativo para operação simultânea com o rádio Wi-Fi do ESP32.</span>
-          </div>
-        `;
-        break;
-
-      case 'TARGET_ESP':
-        pinHtml = `<span class="chip chip-green">LM2596 (Buck 5.0V)</span> <span class="chip chip-blue">ESP32 Dev Module</span> <span class="chip">USB 5V Estabilizada</span>`;
-        formulaHtml = `
-          <div class="formula-block">
-            <div class="formula-title">EFICIÊNCIA BUCK & INTEGRAÇÃO NUMÉRICA DE ENERGIA</div>
-            <div class="formula-math">
-              $$\\eta = \\frac{P_{\\text{saida}}}{P_{\\text{entrada}}} \\quad E = \\int P\\,dt \\approx \\sum P_k \\cdot \\Delta t \\text{ [J]} \\quad E_{\\text{Wh}} = \\frac{E}{3600}$$
-            </div>
-            <div class="formula-desc">Conversão Step-Down com chaveamento de alta eficiência protegendo a carga USB.</div>
-          </div>
-        `;
-        dynamicHtml = `
-          <div class="hud-stats-grid">
-            <div class="hud-stat-item">
-              <span class="label">SAÍDA REGULADA</span>
-              <span class="val green">5.00 V CC</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">ENERGIA TOTAL</span>
-              <span class="val cyan" id="hud-joules-val">${p.joules_total.toFixed(0)} J</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">WATT-HORA</span>
-              <span class="val blue" id="hud-wh-val">${p.watt_hours.toFixed(3)} Wh</span>
-            </div>
-            <div class="hud-stat-item">
-              <span class="label">CALORIAS QUEIMADAS</span>
-              <span class="val orange" id="hud-kcal-val">${p.calories_kcal.toFixed(2)} kcal</span>
-            </div>
-          </div>
-          <div class="hud-info-alert">
-            <i class="icon">🔋</i>
-            <span>Circuito com diodo Schottky e fusível rearmável PTC contra sobretensão acidental.</span>
-          </div>
-        `;
-        break;
-
-      case 'TARGET_LOADS':
-        pinHtml = `<span class="chip chip-orange">GPIO 25 (Relé 1)</span> <span class="chip chip-orange">GPIO 26 (MOSFET 2)</span> <span class="chip chip-orange">GPIO 32 (MOSFET 3)</span>`;
-        formulaHtml = `
-          <div class="formula-block">
-            <div class="formula-title">ASSOCIAÇÃO EM PARALELO, EFEITO JOULE & LEI DE LENZ</div>
-            <div class="formula-math">
-              $$P_{\\text{dissipada}} = \\frac{U^2}{R_{\\text{eq}}} \\qquad \\frac{1}{R_{\\text{eq}}} = \\sum_{i=1}^n \\frac{1}{R_i}$$
-            </div>
-            <div class="formula-desc">Ao acionar mais resistores, a corrente induzida aumenta e o contra-torque magnético freia a pedalada!</div>
-          </div>
-        `;
-        dynamicHtml = `
-          <div class="hud-torque-box">
-            <div class="torque-header">
-              <span>CONJUGADO RESISTENTE (TORQUE DE LENZ):</span>
-              <strong id="hud-lenz-val">Médio (+10W)</strong>
-            </div>
-            <div class="torque-meter">
-              <div class="torque-bar-fill" id="hud-lenz-bar" style="width: 25%;"></div>
-            </div>
-          </div>
-
-          <div class="hud-loads-panel">
-            <div class="hud-load-btn-row">
-              <button class="load-toggle-btn ${p.loads.load_1_relay_25 ? 'active' : ''}" id="hud-load-btn-1">
-                <span class="lamp-indicator"></span>
-                <span class="text">Carga 1 (10W - Relé)</span>
-                <span class="code">GPIO 25</span>
-              </button>
-              <button class="load-toggle-btn ${p.loads.load_2_mosfet_26 ? 'active' : ''}" id="hud-load-btn-2">
-                <span class="lamp-indicator"></span>
-                <span class="text">Carga 2 (15W - MOSFET)</span>
-                <span class="code">GPIO 26</span>
-              </button>
-              <button class="load-toggle-btn ${p.loads.load_3_mosfet_32 ? 'active' : ''}" id="hud-load-btn-3">
-                <span class="lamp-indicator"></span>
-                <span class="text">Carga 3 (25W - MOSFET)</span>
-                <span class="code">GPIO 32</span>
-              </button>
-            </div>
-          </div>
-        `;
-        break;
-    }
-
-    if (this.hudCardBadge) this.hudCardBadge.innerHTML = pinHtml;
-    if (this.hudFormulaBox) this.hudFormulaBox.innerHTML = formulaHtml;
-    if (this.hudDynamicContent) this.hudDynamicContent.innerHTML = dynamicHtml;
-
-    // Se for o painel de cargas, reatacha os eventos dos botões no HUD
-    if (targetId === 'TARGET_LOADS') {
-      const b1 = document.getElementById('hud-load-btn-1');
-      const b2 = document.getElementById('hud-load-btn-2');
-      const b3 = document.getElementById('hud-load-btn-3');
-
-      if (b1) b1.addEventListener('click', () => {
-        const s = this.telemetry.toggleLoad('load_1_relay_25');
-        b1.classList.toggle('active', s.load_1_relay_25);
-        this.sound.toggleOn();
-      });
-      if (b2) b2.addEventListener('click', () => {
-        const s = this.telemetry.toggleLoad('load_2_mosfet_26');
-        b2.classList.toggle('active', s.load_2_mosfet_26);
-        this.sound.toggleOn();
-      });
-      if (b3) b3.addEventListener('click', () => {
-        const s = this.telemetry.toggleLoad('load_3_mosfet_32');
-        b3.classList.toggle('active', s.load_3_mosfet_32);
-        this.sound.toggleOn();
-      });
-    }
-
-    // Renderiza MathJax / KaTeX se estiver disponível na página
-    if (window.renderMathInElement) {
-      window.renderMathInElement(this.hudFormulaBox, {
-        delimiters: [
-          { left: '$$', right: '$$', display: true },
-          { left: '$', right: '$', display: false }
-        ]
-      });
+    if (this.telemetry.latestPacket) {
+      this.updateInspectionValues(this.telemetry.latestPacket);
     }
   }
 
   /**
-   * Atualização leve dos valores numéricos enquanto o painel HUD está em foco
+   * Atualização ultra-rápida dos nós de texto cacheados enquanto o painel HUD está aberto
    */
   updateInspectionValues(p) {
-    const elRpm = document.getElementById('hud-rpm-val');
-    if (elRpm) elRpm.textContent = `${p.rpm}`;
+    if (this.hudRpmVal) this.hudRpmVal.textContent = `${p.rpm}`;
+    if (this.hudFreqVal) this.hudFreqVal.textContent = `${p.frequency_hz.toFixed(1)}`;
+    if (this.hudPeriodVal) {
+      this.hudPeriodVal.textContent = `${p.frequency_hz > 0 ? (1000 / p.frequency_hz).toFixed(1) : 0} ms`;
+    }
 
-    const elFreq = document.getElementById('hud-freq-val');
-    if (elFreq) elFreq.textContent = `${p.frequency_hz.toFixed(1)}`;
+    if (this.hudVVal) this.hudVVal.textContent = `${p.voltage_v.toFixed(2)} V`;
+    if (this.hudIVal) this.hudIVal.textContent = `${p.current_a.toFixed(2)} A`;
+    if (this.hudPVal) this.hudPVal.textContent = `${p.power_w.toFixed(1)} W`;
 
-    const elPeriod = document.getElementById('hud-period-val');
-    if (elPeriod) elPeriod.textContent = `${p.frequency_hz > 0 ? (1000 / p.frequency_hz).toFixed(1) : 0} ms`;
-
-    const elV = document.getElementById('hud-v-val');
-    if (elV) elV.textContent = `${p.voltage_v.toFixed(2)} V`;
-
-    const elI = document.getElementById('hud-i-val');
-    if (elI) elI.textContent = `${p.current_a.toFixed(2)} A`;
-
-    const elP = document.getElementById('hud-p-val');
-    if (elP) elP.textContent = `${p.power_w.toFixed(1)} W`;
-
-    const elJ = document.getElementById('hud-joules-val');
-    if (elJ) elJ.textContent = `${p.joules_total.toFixed(0)} J`;
-
-    const elWh = document.getElementById('hud-wh-val');
-    if (elWh) elWh.textContent = `${p.watt_hours.toFixed(3)} Wh`;
-
-    const elKcal = document.getElementById('hud-kcal-val');
-    if (elKcal) elKcal.textContent = `${p.calories_kcal.toFixed(2)} kcal`;
+    if (this.hudJoulesVal) this.hudJoulesVal.textContent = `${p.joules_total.toFixed(0)} J`;
+    if (this.hudWhVal) this.hudWhVal.textContent = `${p.watt_hours.toFixed(3)} Wh`;
+    if (this.hudKcalVal) this.hudKcalVal.textContent = `${p.calories_kcal.toFixed(2)} kcal`;
 
     const torque = this.telemetry.getLenzTorque();
-    const elTorque = document.getElementById('hud-lenz-val');
-    if (elTorque) {
-      elTorque.textContent = torque.label;
-      elTorque.style.color = torque.color;
+    if (this.hudLenzVal) {
+      this.hudLenzVal.textContent = torque.label;
+      this.hudLenzVal.style.color = torque.color;
     }
-    const elBar = document.getElementById('hud-lenz-bar');
-    if (elBar) {
-      elBar.style.width = `${torque.percent}%`;
-      elBar.style.backgroundColor = torque.color;
+    if (this.hudLenzBar) {
+      this.hudLenzBar.style.width = `${torque.percent}%`;
+      this.hudLenzBar.style.backgroundColor = torque.color;
+    }
+
+    if (p.loads) {
+      this.renderLoadToggles(p.loads);
     }
   }
 

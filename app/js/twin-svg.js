@@ -61,14 +61,12 @@ export class TwinSvgRenderer {
   updateTelemetry(packet) {
     this.currentPacket = packet;
 
-    // 1. Pulso luminoso no LED de telemetria do ESP32 a cada frame recebido
+    // 1. Pulso luminoso no LED de telemetria do ESP32 a cada frame recebido (sem filter pesado)
     if (this.elements.espLed) {
       this.elements.espLed.setAttribute('fill', '#00E5FF');
-      this.elements.espLed.setAttribute('filter', 'url(#glow-cyan)');
       setTimeout(() => {
         if (this.elements.espLed) {
           this.elements.espLed.setAttribute('fill', '#0d47a1');
-          this.elements.espLed.removeAttribute('filter');
         }
       }, 90);
     }
@@ -86,11 +84,11 @@ export class TwinSvgRenderer {
     // 3. Espessura do feixe condutor proporcional à corrente elétrica (A)
     if (this.elements.powerBusLine) {
       const baseWidth = 2.5;
-      const currentFactor = Math.min(10, Math.max(0, packet.current_a * 2.2));
+      const currentFactor = Math.min(8, Math.max(0, packet.current_a * 2.0));
       const strokeWidth = (baseWidth + currentFactor).toFixed(1);
       this.elements.powerBusLine.setAttribute('stroke-width', strokeWidth);
 
-      // Brilho e cor proporcional à corrente e potência
+      // Cor proporcional à corrente e potência
       if (packet.power_w > 35) {
         this.elements.powerBusLine.setAttribute('stroke', '#00F59B');
       } else if (packet.power_w > 10) {
@@ -105,11 +103,9 @@ export class TwinSvgRenderer {
       if (packet.status && packet.status.buck_5v_ok) {
         this.elements.usb5vLine.setAttribute('stroke', '#00F59B');
         this.elements.usb5vLine.setAttribute('stroke-opacity', '0.9');
-        this.elements.usb5vLine.setAttribute('filter', 'url(#glow-emerald)');
       } else {
         this.elements.usb5vLine.setAttribute('stroke', '#64748b');
         this.elements.usb5vLine.setAttribute('stroke-opacity', '0.4');
-        this.elements.usb5vLine.removeAttribute('filter');
       }
     }
 
@@ -118,7 +114,7 @@ export class TwinSvgRenderer {
   }
 
   /**
-   * Atualiza a cor e incandescência dos resistores cerâmicos
+   * Atualiza a cor e incandescência dos resistores cerâmicos usando gradientes radiais GPU
    */
   updateResistorThermalVisuals(loads) {
     if (!loads) return;
@@ -128,7 +124,7 @@ export class TwinSvgRenderer {
       loads.load_1_relay_25,
       this.elements.resistor1Body,
       this.elements.resistor1Glow,
-      '#FF9500' // Âmbar quente
+      '#FF9500'
     );
 
     // Resistor 2 (15W - MOSFET GPIO 26)
@@ -136,7 +132,7 @@ export class TwinSvgRenderer {
       loads.load_2_mosfet_26,
       this.elements.resistor2Body,
       this.elements.resistor2Glow,
-      '#FF6F00' // Laranja incandescente
+      '#FF6F00'
     );
 
     // Resistor 3 (25W - MOSFET GPIO 32)
@@ -144,7 +140,7 @@ export class TwinSvgRenderer {
       loads.load_3_mosfet_32,
       this.elements.resistor3Body,
       this.elements.resistor3Glow,
-      '#FF3366' // Vermelho rubi incandescente
+      '#FF3366'
     );
   }
 
@@ -153,15 +149,12 @@ export class TwinSvgRenderer {
     if (isActive) {
       bodyEl.setAttribute('fill', glowColor);
       bodyEl.setAttribute('stroke', '#FFF');
-      bodyEl.setAttribute('filter', 'url(#glow-hot)');
       if (glowEl) {
-        glowEl.setAttribute('opacity', '0.75');
-        glowEl.setAttribute('fill', glowColor);
+        glowEl.setAttribute('opacity', '0.9');
       }
     } else {
-      bodyEl.setAttribute('fill', '#334155'); // Ardósia inativo
+      bodyEl.setAttribute('fill', '#334155');
       bodyEl.setAttribute('stroke', '#475569');
-      bodyEl.removeAttribute('filter');
       if (glowEl) {
         glowEl.setAttribute('opacity', '0.0');
       }
@@ -198,7 +191,6 @@ export class TwinSvgRenderer {
             'transform',
             `rotate(${angleStr} 460 390)`
           );
-          // Mantém as plataformas dos pedais sempre niveladas na horizontal
           if (this.elements.pedalRight) {
             this.elements.pedalRight.setAttribute(
               'transform',
@@ -233,18 +225,15 @@ export class TwinSvgRenderer {
           this.elements.currentFluxEffect.style.strokeDashoffset = `${-fluxOffset.toFixed(1)}px`;
         }
 
-        // 5. Pulso dos anéis de indução do alternador (linhas de Faraday)
+        // 5. Pulso dos anéis de indução do alternador (apenas opacidade, zero re-layout)
         if (this.elements.altFluxRings) {
           const pulsePhase = (now * 0.005 * (rpm / 50.0)) % (Math.PI * 2);
-          const scale = 1.0 + 0.08 * Math.sin(pulsePhase);
-          const opacity = 0.4 + 0.35 * Math.sin(pulsePhase);
-          this.elements.altFluxRings.forEach((ring, idx) => {
-            ring.style.opacity = opacity.toFixed(2);
-            ring.style.strokeWidth = (1.5 + (idx % 2) * 1.0).toString();
+          const opacity = (0.35 + 0.35 * Math.sin(pulsePhase)).toFixed(2);
+          this.elements.altFluxRings.forEach((ring) => {
+            ring.style.opacity = opacity;
           });
         }
       } else {
-        // Quando parado, atenua os efeitos de fluxo
         if (this.elements.altFluxRings) {
           this.elements.altFluxRings.forEach((ring) => {
             ring.style.opacity = '0.15';

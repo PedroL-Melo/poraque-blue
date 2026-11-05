@@ -40,11 +40,13 @@ body {
   color: var(--text-main);
   font-family: var(--font-sans);
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ==========================================================================
@@ -240,6 +242,12 @@ body {
   display: block;
 }
 
+#camera-stage {
+  transform-origin: 0 0;
+  will-change: transform;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* ==========================================================================
    KPIS GLOBAIS COMPACTOS (MODO PANORÂMICO)
    ========================================================================== */
@@ -304,6 +312,12 @@ body {
    ========================================================================== */
 .hotspot-node {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hotspot-touch-area {
+  cursor: pointer;
+  pointer-events: all;
 }
 
 .hotspot-ring {
@@ -345,21 +359,21 @@ body {
   position: absolute;
   top: 1rem;
   right: 1.25rem;
-  width: 380px;
+  width: 375px;
   max-height: calc(100vh - 160px);
-  background: rgba(10, 17, 36, 0.88);
-  backdrop-filter: blur(20px);
+  background: rgba(10, 17, 36, 0.92);
+  backdrop-filter: blur(18px);
   border: 1px solid rgba(0, 229, 255, 0.35);
   border-radius: var(--radius-lg);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 24px rgba(29, 99, 255, 0.2);
   z-index: 40;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   transform: translateX(420px);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
 }
 
 .hud-side-card.open {
@@ -368,40 +382,87 @@ body {
   pointer-events: auto;
 }
 
-.hud-header {
-  padding: 1rem 1.25rem;
-  background: rgba(16, 28, 59, 0.6);
-  border-bottom: 1px solid var(--bg-card-border);
+.hud-side-card.open.peek-collapsed {
+  transform: translateX(calc(100% + 4px));
+}
+
+/* Aba Lateral de Espiar (Recolher/Expandir Card) */
+.hud-peek-tab {
+  position: absolute;
+  left: -26px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 60px;
+  background: rgba(13, 23, 48, 0.95);
+  border: 1px solid rgba(0, 229, 255, 0.45);
+  border-right: none;
+  border-radius: 14px 0 0 14px;
+  color: var(--accent-cyan);
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  box-shadow: -4px 0 14px rgba(0, 0, 0, 0.5);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  z-index: 5;
+}
+
+.hud-peek-tab:hover {
+  background: rgba(29, 99, 255, 0.35);
+  color: #fff;
+}
+
+.hud-header {
+  padding: 0.9rem 1.15rem;
+  background: rgba(16, 28, 59, 0.65);
+  border-bottom: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .hud-header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.7rem;
+  min-width: 0;
 }
 
 .hud-logo-mini {
-  height: 32px;
+  height: 30px;
   width: auto;
-  max-width: 48px;
+  max-width: 44px;
   object-fit: contain;
   filter: drop-shadow(0 0 6px rgba(0, 229, 255, 0.5));
+  flex-shrink: 0;
+}
+
+.hud-title-wrap {
+  min-width: 0;
 }
 
 .hud-title-wrap h3 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   color: #fff;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-title-wrap p {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--accent-cyan);
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hud-close-btn {
@@ -416,6 +477,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
+  flex-shrink: 0;
   transition: all var(--transition-fast);
 }
 
@@ -425,11 +487,35 @@ body {
 }
 
 .hud-body {
-  padding: 1.1rem 1.25rem;
+  padding: 1rem 1.15rem;
   overflow-y: auto;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.85rem;
+}
+
+/* Painéis Pré-Montados de cada Módulo (Zero DOM Rebuild) */
+.hud-module-panel {
+  display: none;
+}
+
+.hud-module-panel.active {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  animation: panelFadeIn 0.22s ease;
+}
+
+@keyframes panelFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .hud-badges-row {
@@ -439,11 +525,11 @@ body {
 }
 
 .chip {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-family: var(--font-mono);
   font-weight: 600;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--text-muted);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -473,37 +559,83 @@ body {
   border-color: rgba(255, 149, 0, 0.4);
 }
 
-/* Bloco de Fórmulas Matemáticas */
+/* Bloco de Fórmulas Matemáticas Nativas (Offline, 0ms) */
 .formula-block {
-  background: rgba(7, 12, 26, 0.7);
-  border: 1px solid rgba(41, 72, 133, 0.4);
+  background: rgba(7, 12, 26, 0.78);
+  border: 1px solid rgba(41, 72, 133, 0.45);
   border-radius: var(--radius-md);
-  padding: 0.75rem 0.9rem;
+  padding: 0.65rem 0.8rem;
 }
 
 .formula-title {
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.6rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--text-dim);
   margin-bottom: 6px;
+  text-transform: uppercase;
 }
 
-.formula-math {
-  font-family: 'KaTeX_Main', var(--font-mono);
-  font-size: 0.85rem;
-  color: var(--accent-cyan);
-  text-align: center;
+.math-eq-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
   padding: 4px 0;
-  line-height: 1.4;
-  overflow-x: auto;
 }
 
-.formula-desc {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 6px;
-  line-height: 1.35;
+.math-eq {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.06);
+  border: 1px solid rgba(0, 229, 255, 0.16);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.m-var {
+  color: #f8fafc;
+  font-style: italic;
+}
+
+.m-var sub,
+.m-num sub,
+.m-den sub,
+.m-op sub {
+  font-size: 0.68em;
+  font-style: normal;
+  color: #93c5fd;
+}
+
+.m-op {
+  color: var(--accent-emerald);
+  font-weight: 600;
+}
+
+.m-frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  line-height: 1.1;
+  padding: 0 2px;
+}
+
+.m-num {
+  border-bottom: 1.5px solid rgba(0, 229, 255, 0.65);
+  padding: 0 3px 2px 3px;
+  color: var(--accent-cyan);
+}
+
+.m-den {
+  padding: 2px 3px 0 3px;
+  color: #cbd5e1;
 }
 
 /* Grid de Estatísticas do HUD */
@@ -755,6 +887,12 @@ body {
   text-transform: uppercase;
 }
 
+.bottom-loads-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .load-quick-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -780,6 +918,48 @@ body {
   border-color: var(--accent-amber);
   color: #fff;
   box-shadow: 0 0 10px rgba(255, 149, 0, 0.35);
+}
+
+/* Medidor Compacto do Torque de Lenz */
+.lenz-mini-meter {
+  min-width: 140px;
+  margin-left: 6px;
+}
+
+.lenz-mini-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+}
+
+.lenz-mini-title {
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.lenz-mini-val {
+  font-weight: 700;
+  color: var(--accent-emerald);
+}
+
+.lenz-mini-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.lenz-mini-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent-emerald);
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* Alça do Bottom Sheet (Oculta no Desktop) */
+.hud-sheet-handle {
+  display: none;
 }
 
 /* Mini Osciloscópio */
@@ -855,7 +1035,11 @@ body {
   to { stroke-dashoffset: -28; }
 }
 
-/* Responsividade Básica para Telas de Bancada e Telões */
+/* ==========================================================================
+   RESPONSIVIDADE MULTI-DISPOSITIVO (TABLETS & SMARTPHONES)
+   ========================================================================== */
+
+/* 1. Notebooks Compactos e Tablets em Paisagem (<= 1100px) */
 @media (max-width: 1100px) {
   .global-kpi-bar {
     flex-wrap: wrap;
@@ -866,5 +1050,353 @@ body {
   }
   .oscilloscope-box {
     display: none;
+  }
+}
+
+/* 2. Smartphones e Tablets em Retrato (<= 768px) */
+@media (max-width: 768px) {
+  /* Etapa 1: Header em 2 Níveis com Carrossel Deslizante */
+  .twin-header {
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .brand-section {
+    width: 100%;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .brand-logo-wrap {
+    height: 34px;
+  }
+
+  .brand-logo-img {
+    height: 30px;
+  }
+
+  .brand-title {
+    font-size: 0.95rem;
+    margin-right: auto;
+  }
+
+  .institution-pill {
+    font-size: 0.62rem;
+    padding-left: 0.55rem;
+    text-align: right;
+  }
+
+  .nav-pills-container {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    border-radius: 14px;
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .nav-pills-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-pill-target {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.74rem;
+    padding: 6px 12px;
+    min-height: 32px;
+  }
+
+  /* Etapa 2: Faixa de KPIs no Topo (Acima da Bicicleta, sem sobrepor os sensores) */
+  .twin-viewport {
+    flex-direction: column;
+    position: relative;
+  }
+
+  .global-kpi-bar {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px 10px 4px 10px;
+    max-height: 85px;
+    opacity: 1;
+    z-index: 25;
+    pointer-events: auto;
+    transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+  }
+
+  /* Recolhe KPIs suavemente no topo durante o modo de inspeção/zoom */
+  .twin-viewport.inspection-mode .global-kpi-bar {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .kpi-card {
+    min-width: 0;
+    padding: 6px 4px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
+  .kpi-card .label {
+    font-size: 0.52rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .kpi-card .value {
+    font-size: 0.88rem;
+  }
+
+  .kpi-card .sub {
+    display: none;
+  }
+
+  /* Etapa 3: Viewport Central & Card Lateral Edge-Docked (Vindo da Direita) */
+  .svg-stage {
+    flex: 1;
+    min-height: 0;
+    padding: 4px;
+  }
+
+  #bike-twin-svg {
+    max-height: 100%;
+  }
+
+  .hud-side-card {
+    top: 50%;
+    bottom: auto;
+    left: auto;
+    right: 0;
+    width: min(76vw, 290px);
+    max-height: calc(100% - 16px);
+    border-radius: 24px 0 0 24px;
+    border-right: none;
+    transform: translate(110%, -50%);
+    box-shadow: -12px 0 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 229, 255, 0.15);
+  }
+
+  .hud-side-card.open {
+    transform: translate(0, -50%);
+  }
+
+  .hud-side-card.open.peek-collapsed {
+    transform: translate(calc(100% + 2px), -50%);
+  }
+
+  .hud-sheet-handle {
+    display: none;
+  }
+
+  .hud-header {
+    padding: 0.7rem 0.9rem;
+    border-radius: 24px 0 0 0;
+  }
+
+  .hud-logo-mini {
+    height: 24px;
+    max-width: 34px;
+  }
+
+  .hud-title-wrap h3 {
+    font-size: 0.84rem;
+  }
+
+  .hud-title-wrap p {
+    font-size: 0.64rem;
+  }
+
+  .hud-body {
+    padding: 0.75rem 0.9rem;
+    gap: 0.65rem;
+    border-radius: 0 0 0 24px;
+  }
+
+  .hud-module-panel.active {
+    gap: 0.65rem;
+  }
+
+  .chip {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+  }
+
+  .formula-block {
+    padding: 0.55rem 0.65rem;
+    border-radius: 12px;
+  }
+
+  .formula-title {
+    font-size: 0.54rem;
+    margin-bottom: 4px;
+  }
+
+  .math-eq-row {
+    gap: 0.45rem;
+  }
+
+  .math-eq {
+    font-size: 0.74rem;
+    padding: 3px 8px;
+  }
+
+  .hud-stats-grid {
+    gap: 0.45rem;
+  }
+
+  .hud-stat-item {
+    padding: 6px 8px;
+    border-radius: 10px;
+  }
+
+  .hud-stat-item .label {
+    font-size: 0.55rem;
+  }
+
+  .hud-stat-item .val {
+    font-size: 0.88rem;
+  }
+
+  .load-toggle-btn {
+    padding: 6px 10px;
+  }
+
+  .load-toggle-btn .text {
+    font-size: 0.72rem;
+  }
+
+  .hud-return-btn {
+    padding: 8px;
+    font-size: 0.74rem;
+    border-radius: 12px;
+    margin-top: 0.2rem;
+  }
+
+  /* Etapa 5: Barra Inferior Empilhada Ergonômica para Polegar */
+  .twin-bottom-bar {
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .control-cadence {
+    width: 100%;
+    min-width: 0;
+    gap: 0.75rem;
+  }
+
+  .control-cadence .label-wrap {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 125px;
+  }
+
+  .control-cadence .label {
+    font-size: 0.62rem;
+  }
+
+  .control-cadence .display {
+    font-size: 0.88rem;
+  }
+
+  .cadence-range {
+    height: 8px;
+  }
+
+  .cadence-range::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bottom-loads-section {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .bottom-loads-section .section-label {
+    display: none;
+  }
+
+  .bottom-loads-buttons {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .load-quick-btn {
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 0.74rem;
+    min-height: 36px;
+  }
+
+  .lenz-mini-meter {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+}
+
+/* 3. Celulares Ultra-Compactos (<= 400px) */
+@media (max-width: 400px) {
+  .institution-pill span:last-child {
+    display: none;
+  }
+  .kpi-card .value {
+    font-size: 0.78rem;
+  }
+  .control-cadence .label {
+    display: none;
+  }
+  .control-cadence .label-wrap {
+    min-width: 65px;
+  }
+}
+
+/* 4. Celulares na Horizontal / Landscape com pouca altura (<= 500px height) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .twin-header {
+    height: 46px;
+    min-height: 46px;
+    flex-direction: row;
+    padding: 0 0.75rem;
+  }
+  .institution-pill {
+    display: none;
+  }
+  .twin-bottom-bar {
+    height: 52px;
+    min-height: 52px;
+    flex-direction: row;
+    padding: 0 0.75rem;
+  }
+  .hud-side-card {
+    max-height: calc(100dvh - 110px);
   }
 }

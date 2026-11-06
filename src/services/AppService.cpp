@@ -1,8 +1,8 @@
 #include <LittleFS.h>
 #include "services/AppService.h"
 
-AppService::AppService(uint16_t port) {
-    server = new WebServer(port);
+AppService::AppService(WebServer& server) {
+    this->server = &server;
 }
 
 void AppService::begin() {
@@ -15,7 +15,7 @@ void AppService::begin() {
     server->onNotFound([this]() {
         server->sendHeader("Location", "/app/index.html");
         server->send(302, "text/plain", "");
-    }); 
+    });
     server->serveStatic("/app/", LittleFS, "/");
 
     server->begin();

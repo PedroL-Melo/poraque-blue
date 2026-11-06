@@ -1,18 +1,17 @@
-#pragma once
+#ifndef APPSERVICE_H
+#define APPSERVICE_H
 
-#include <Arduino.h>
 #include <WebServer.h>
-#include <LittleFS.h>
 
 class AppService {
 private:
     WebServer* server;
 
 public:
-    explicit AppService(uint16_t port);
+    explicit AppService(WebServer& server);
 
     void begin();
-
     void handleClient();
-
 };
+
+#endif

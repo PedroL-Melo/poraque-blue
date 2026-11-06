@@ -1,5 +1,4 @@
-#ifndef APPSERVICE_H
-#define APPSERVICE_H
+#pragma once
 
 #include <WebServer.h>
 
@@ -13,5 +12,3 @@ public:
     void begin();
     void handleClient();
 };
-
-#endif

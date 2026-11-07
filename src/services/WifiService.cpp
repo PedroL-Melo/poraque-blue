@@ -38,7 +38,7 @@ bool WifiService::connect() {
     Serial.println();
 
     Serial.printf("Link do Site: http://%s/app/\n", getIP().c_str());
-    Serial.printf("Link da API: http://%s/api/\n", getIP().c_str());
+    Serial.printf("Link do WebSocket: ws://%s/ws/\n", getIP().c_str());
 
     return true;
 }

@@ -45,14 +45,4 @@ void SocketService::onEvent(
         client->text("{\"status\":\"received\"}");
         return;
     }
-
-    if (type == WS_EVT_PONG) {
-        Serial.println("WEBSOCKET: Pong recebido!");
-        return;
-    }
-
-    if (type == WS_EVT_ERROR) {
-        Serial.println("WEBSOCKET: Erro!");
-        return;
-    }
 }

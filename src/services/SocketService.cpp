@@ -46,3 +46,7 @@ void SocketService::onEvent(
         return;
     }
 }
+
+void SocketService::sendData(String data) {
+    ws.textAll(data);
+}

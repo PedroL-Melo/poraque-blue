@@ -20,4 +20,5 @@ public:
     explicit SocketService(AsyncWebServer& server);
 
     void begin();
+    void sendData(String data);
 };

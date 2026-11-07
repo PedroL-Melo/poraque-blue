@@ -1,6 +1,10 @@
 @echo off
 setlocal
 
+echo === Instalando dependencias do frontend ===
+call npm --prefix "%~dp0app" install
+if errorlevel 1 exit /b 1
+
 echo === Compilando frontend ===
 call npm --prefix "%~dp0app" run build
 if errorlevel 1 exit /b 1

@@ -20,6 +20,5 @@ void AppService::begin() {
     server->serveStatic("/app/", LittleFS, "/");
 
     server->begin();
-
     Serial.println("\nServidor HTTP iniciado!");
 }

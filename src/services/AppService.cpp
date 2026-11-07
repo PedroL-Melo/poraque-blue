@@ -6,7 +6,6 @@ AppService::AppService(AsyncWebServer& server) {
 }
 
 void AppService::begin() {
-
     if (!LittleFS.begin(true)) {
         Serial.println("Erro ao inicializar LittleFS!");
         return;

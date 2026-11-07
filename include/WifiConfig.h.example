@@ -1,4 +1,0 @@
-#pragma once
-
-#define WIFI_SSID "REDE_2G"
-#define WIFI_PASSWORD "12345678"

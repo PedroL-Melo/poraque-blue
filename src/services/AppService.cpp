@@ -10,8 +10,7 @@ void AppService::begin() {
         Serial.println("Erro ao inicializar LittleFS!");
         return;
     }
-
-    Serial.println("LittleFS inicializado!");
+    Serial.println("\nLittleFS inicializado!");
 
     server->onNotFound([](AsyncWebServerRequest *request) {
         request->redirect("/app/index.html");

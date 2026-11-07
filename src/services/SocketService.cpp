@@ -19,7 +19,7 @@ void SocketService::begin() {
     );
 
     server->addHandler(&ws);
-    Serial.println("WebSocket inicializado");
+    Serial.println("\nWebSocket inicializado");
 }
 
 void SocketService::onEvent(

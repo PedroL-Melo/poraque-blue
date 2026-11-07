@@ -18,6 +18,8 @@ void setup() {
     
     webApp.begin();
     webSocket.begin();
+
+    Serial.println();
 }
 
 void loop() {

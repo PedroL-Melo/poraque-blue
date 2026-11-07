@@ -23,5 +23,10 @@ void setup() {
 }
 
 void loop() {
+    JsonDocument json;
+    json["message"] = "Hello World!";
+    
+    webSocket.sendData(json);
 
+    delay(5000);
 }

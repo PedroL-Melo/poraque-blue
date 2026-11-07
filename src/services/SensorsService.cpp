@@ -7,7 +7,7 @@ SensorsService::SensorsService() {
 void SensorsService::begin() {
     //...
     
-    Serial.println("\nSensores inicializados");
+    Serial.println("Sensores inicializados!");
 }
 
 JsonDocument SensorsService::read() {

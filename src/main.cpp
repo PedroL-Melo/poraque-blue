@@ -1,12 +1,12 @@
 #include <Arduino.h>
-#include <WebServer.h>
+#include <ESPAsyncWebServer.h>
 #include "WifiConfig.h"
 #include "services/WifiService.h"
 #include "services/AppService.h"
 
 WifiService wifi(WIFI_SSID, WIFI_PASSWORD);
 
-WebServer server(80);
+AsyncWebServer server(80);
 AppService webApp(server);
 
 void setup() {
@@ -19,7 +19,5 @@ void setup() {
 }
 
 void loop() {
-
-    webApp.handleClient();
 
 }

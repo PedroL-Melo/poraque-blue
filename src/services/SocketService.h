@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ESPAsyncWebServer.h>
+#include <ArduinoJson.h>
 
 class SocketService {
 private:
@@ -20,5 +21,5 @@ public:
     explicit SocketService(AsyncWebServer& server);
 
     void begin();
-    void sendData(String data);
+    void sendData(JsonDocument& data);
 };

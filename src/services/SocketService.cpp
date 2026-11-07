@@ -47,6 +47,10 @@ void SocketService::onEvent(
     }
 }
 
-void SocketService::sendData(String data) {
-    ws.textAll(data);
+void SocketService::sendData(JsonDocument& data) {
+    String json;
+
+    serializeJson(data, json);
+
+    ws.textAll(json);
 }

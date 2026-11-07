@@ -1,14 +1,13 @@
 #pragma once
 
-#include <WebServer.h>
+#include <ESPAsyncWebServer.h>
 
 class AppService {
 private:
-    WebServer* server;
+    AsyncWebServer* server;
 
 public:
-    explicit AppService(WebServer& server);
+    explicit AppService(AsyncWebServer& server);
 
     void begin();
-    void handleClient();
 };

@@ -3,4 +3,4 @@
 #define WIFI_SSID "REDE_PB"
 #define WIFI_PASSWORD "12345678"
 
-// pinos...
+#define BROADCAST_INTERVAL_MS 300

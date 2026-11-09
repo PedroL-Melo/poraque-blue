@@ -1,17 +1,20 @@
 /**
  * ============================================================================
  * PURAQUÊ BLUE TWIN - TelemetryService & Physics Engine
- * Motor de Simulação de Física Eletromecânica & Cliente WebSocket
+ * Motor de Simulação de Física Eletromecânica & Cliente WebSocket com Auto-Connect
  * ============================================================================
  */
 
 export class TelemetryService {
   constructor() {
-    this.isSimulating = true;
-    this.wsUrl = 'ws://192.168.4.1:81';
+    this.wsUrl = this.resolveWsUrl();
     this.socket = null;
     this.connectionState = 'simulated'; // 'connected' | 'connecting' | 'disconnected' | 'simulated'
     this.listeners = [];
+
+    // Reconnection timer
+    this.reconnectTimer = null;
+    this.autoConnectEnabled = true;
 
     // Estado dos Atuadores (Banco de Cargas)
     this.loads = {
@@ -30,6 +33,7 @@ export class TelemetryService {
     this.joulesTotal = 0;
     this.wattHours = 0;
     this.caloriesKcal = 0;
+    this.lastPacketTime = performance.now();
 
     // Temporização do ciclo de telemetria (300 ms conforme especificação)
     this.intervalMs = 300;
@@ -39,6 +43,34 @@ export class TelemetryService {
     this.latestPacket = null;
 
     this.startSimulationLoop();
+
+    // Inicia conexão automática ao WebSocket (caso não esteja com parâmetro ?mock=true)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('mock')) {
+      this.connectWebSocket();
+    } else {
+      console.log('[TelemetryService] Modo MOCK explícito (?mock). Simulação ativa sem WebSocket.');
+    }
+  }
+
+  /**
+   * Resolve a URL do WebSocket dinamicamente:
+   * 1. Parâmetro na query string (?ws=ws://192.168.4.1/ws)
+   * 2. Se rodando servido pelo ESP32 (ex: http://192.168.4.1/app/), usa o host atual: ws://192.168.4.1/ws
+   * 3. Fallback para 'ws://192.168.4.1/ws'
+   */
+  resolveWsUrl() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('ws')) {
+        return params.get('ws');
+      }
+      if (window.location && window.location.host && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${protocol}//${window.location.host}/ws`;
+      }
+    } catch (e) {}
+    return 'ws://192.168.4.1/ws';
   }
 
   // Ouvinte de telemetria
@@ -83,6 +115,18 @@ export class TelemetryService {
   setLoadState(loadKey, state) {
     if (this.loads.hasOwnProperty(loadKey)) {
       this.loads[loadKey] = Boolean(state);
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        try {
+          const cmd = {
+            command: 'set_loads',
+            loads: this.loads,
+            timestamp: Date.now()
+          };
+          this.socket.send(JSON.stringify(cmd));
+        } catch (e) {
+          console.error('[TelemetryService] Erro ao enviar comando de carga:', e);
+        }
+      }
     }
   }
 
@@ -125,6 +169,84 @@ export class TelemetryService {
       level,
       color,
       percent: Math.min(100, Math.round((addedWatts / 50) * 100))
+    };
+  }
+
+  /**
+   * Normaliza pacote recebido do ESP32, preenchendo campos ausentes e calculando
+   * potências/energias derivadas caso o backend envie apenas valores brutos.
+   */
+  normalizePacket(raw) {
+    const now = performance.now();
+    const dtSec = Math.max(0.1, Math.min(2.0, (now - this.lastPacketTime) / 1000.0));
+    this.lastPacketTime = now;
+
+    const rpm = Number(raw.rpm !== undefined ? raw.rpm : 0);
+    const frequencyHz = Number(
+      raw.frequency_hz !== undefined
+        ? raw.frequency_hz
+        : ((rpm / 60.0) * this.pulsesPerRevolution)
+    );
+    const voltageV = Number(raw.voltage_v !== undefined ? raw.voltage_v : (raw.voltage !== undefined ? raw.voltage : 0));
+    const currentA = Number(raw.current_a !== undefined ? raw.current_a : (raw.current !== undefined ? raw.current : 0));
+
+    // Potência instantânea P = V * I
+    const powerW = Number(
+      raw.power_w !== undefined
+        ? raw.power_w
+        : (voltageV * currentA)
+    );
+
+    // Acúmulo de energia (integração numérica caso não venha pronta do ESP32)
+    if (raw.joules_total !== undefined) {
+      this.joulesTotal = Number(raw.joules_total);
+    } else if (powerW > 0) {
+      this.joulesTotal += powerW * dtSec;
+    }
+
+    if (raw.watt_hours !== undefined) {
+      this.wattHours = Number(raw.watt_hours);
+    } else {
+      this.wattHours = this.joulesTotal / 3600.0;
+    }
+
+    if (raw.calories_kcal !== undefined) {
+      this.caloriesKcal = Number(raw.calories_kcal);
+    } else {
+      this.caloriesKcal = this.joulesTotal / 4184.0;
+    }
+
+    // Cargas
+    if (raw.loads && typeof raw.loads === 'object') {
+      this.loads = {
+        load_1_relay_25: Boolean(raw.loads.load_1_relay_25),
+        load_2_mosfet_26: Boolean(raw.loads.load_2_mosfet_26),
+        load_3_mosfet_32: Boolean(raw.loads.load_3_mosfet_32)
+      };
+    }
+
+    // Status
+    const statusObj = raw.status || {};
+    const buckOk = statusObj.buck_5v_ok !== undefined
+      ? Boolean(statusObj.buck_5v_ok)
+      : (voltageV >= 6.5);
+
+    return {
+      timestamp: raw.timestamp || Date.now(),
+      rpm: Math.round(rpm),
+      frequency_hz: Number(frequencyHz.toFixed(1)),
+      voltage_v: Number(voltageV.toFixed(2)),
+      current_a: Number(currentA.toFixed(2)),
+      power_w: Number(powerW.toFixed(1)),
+      joules_total: Number(this.joulesTotal.toFixed(0)),
+      watt_hours: Number(this.wattHours.toFixed(3)),
+      calories_kcal: Number(this.caloriesKcal.toFixed(2)),
+      loads: { ...this.loads },
+      status: {
+        simulation: false,
+        wifi_rssi: Number(statusObj.wifi_rssi || -50),
+        buck_5v_ok: buckOk
+      }
     };
   }
 
@@ -227,7 +349,7 @@ export class TelemetryService {
   }
 
   /**
-   * Conecta ao WebSocket do ESP32 ou Broker MQTT via WS
+   * Conecta ao WebSocket do ESP32
    */
   connectWebSocket(url = null) {
     if (url) this.wsUrl = url;
@@ -238,6 +360,7 @@ export class TelemetryService {
       } catch (e) {}
     }
 
+    clearTimeout(this.reconnectTimer);
     this.connectionState = 'connecting';
     console.log(`[TelemetryService] Conectando a ${this.wsUrl}...`);
 
@@ -245,40 +368,51 @@ export class TelemetryService {
       this.socket = new WebSocket(this.wsUrl);
 
       this.socket.onopen = () => {
-        console.log(`[TelemetryService] Conectado ao hardware com sucesso!`);
+        console.log(`[TelemetryService] Conectado ao hardware ESP32 com sucesso!`);
         this.connectionState = 'connected';
       };
 
       this.socket.onmessage = (event) => {
         try {
-          const packet = JSON.parse(event.data);
-          // Atualiza acumuladores persistentes se o hardware enviar
-          if (packet.joules_total !== undefined) this.joulesTotal = packet.joules_total;
-          if (packet.watt_hours !== undefined) this.wattHours = packet.watt_hours;
-          if (packet.calories_kcal !== undefined) this.caloriesKcal = packet.calories_kcal;
-          if (packet.loads) this.loads = { ...this.loads, ...packet.loads };
-
-          this.notify(packet);
+          const raw = JSON.parse(event.data);
+          const normalized = this.normalizePacket(raw);
+          this.notify(normalized);
         } catch (err) {
           console.warn('[TelemetryService] Pacote inválido:', event.data);
         }
       };
 
       this.socket.onerror = (err) => {
-        console.warn('[TelemetryService] Erro no WebSocket:', err);
+        console.warn('[TelemetryService] Erro no WebSocket (tentando reconectar em 3s)...');
       };
 
       this.socket.onclose = () => {
-        console.log('[TelemetryService] Conexão WebSocket encerrada. Retornando ao modo simulação...');
+        if (this.connectionState === 'connected') {
+          console.log('[TelemetryService] Conexão WebSocket encerrada. Retornando ao modo simulação...');
+        }
         this.connectionState = 'simulated';
+
+        // Tenta reconectar a cada 3 segundos silenciosamente
+        if (this.autoConnectEnabled) {
+          this.reconnectTimer = setTimeout(() => {
+            this.connectWebSocket();
+          }, 3000);
+        }
       };
     } catch (e) {
       console.warn('[TelemetryService] Falha ao iniciar WebSocket:', e);
       this.connectionState = 'simulated';
+      if (this.autoConnectEnabled) {
+        this.reconnectTimer = setTimeout(() => {
+          this.connectWebSocket();
+        }, 3000);
+      }
     }
   }
 
   disconnectWebSocket() {
+    this.autoConnectEnabled = false;
+    clearTimeout(this.reconnectTimer);
     if (this.socket) {
       this.socket.close();
       this.socket = null;

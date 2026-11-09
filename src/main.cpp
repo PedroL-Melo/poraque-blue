@@ -14,6 +14,9 @@ SocketService webSocket(server);
 
 SensorsService sensorsManager;
 
+unsigned long lastBroadcastTime = 0;
+const unsigned long BROADCAST_INTERVAL_MS = 300;
+
 void setup() {
     Serial.begin(115200);
     
@@ -28,7 +31,10 @@ void setup() {
 }
 
 void loop() {
-    JsonDocument data = sensorsManager.read();
-    
-    webSocket.sendData(data);
+    unsigned long now = millis();
+    if (now - lastBroadcastTime >= BROADCAST_INTERVAL_MS) {
+        lastBroadcastTime = now;
+        JsonDocument data = sensorsManager.read();
+        webSocket.sendData(data);
+    }
 }

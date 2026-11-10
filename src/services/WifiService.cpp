@@ -16,7 +16,6 @@ WifiService::WifiService(
 }
 
 bool WifiService::connect() {
-
     WiFi.mode(WIFI_AP);
 
     if (!WiFi.softAPConfig(localIP, gateway, subnet)) {

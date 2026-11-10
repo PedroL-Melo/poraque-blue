@@ -22,7 +22,7 @@ float RPMSensor::read() {
         unsigned long deltaTime = currentTime - lastBlackReadTime;
 
         if (deltaTime > 0) {
-            rpm = (circumference * 10.0f) / deltaTime;
+            rpm = (circumference * 36.0f) / deltaTime;
         }
         lastBlackReadTime = currentTime;
     }

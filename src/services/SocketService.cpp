@@ -29,23 +29,7 @@ void SocketService::onEvent(
     void* arg,
     uint8_t* data,
     size_t len
-) {
-    if (type == WS_EVT_CONNECT) {
-        Serial.println("WEBSOCKET: Cliente conectado!");
-        return;
-    }
-
-    if (type == WS_EVT_DISCONNECT) {
-        Serial.println("WEBSOCKET: Cliente desconectado!");
-        return;
-    }
-
-    if (type == WS_EVT_DATA) {
-        Serial.println("WEBSOCKET: Mensagem recebida!");
-        client->text("{\"status\":\"received\"}");
-        return;
-    }
-}
+) {}
 
 void SocketService::sendData(JsonDocument& data) {
     String json;

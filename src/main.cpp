@@ -18,6 +18,7 @@ void setup() {
     Serial.begin(115200);
     
     wifi.connect();
+    server.begin();
     
     webApp.begin();
     webSocket.begin();

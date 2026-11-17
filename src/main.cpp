@@ -7,7 +7,6 @@
 #include "services/SensorsService.h"
 
 WifiService wifi(WIFI_SSID, WIFI_PASSWORD);
-
 AsyncWebServer server(80);
 AppService webApp(server);
 SocketService webSocket(server);

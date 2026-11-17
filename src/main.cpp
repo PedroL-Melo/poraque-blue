@@ -11,8 +11,9 @@ WifiService wifi(WIFI_SSID, WIFI_PASSWORD);
 AsyncWebServer server(80);
 AppService webApp(server);
 SocketService webSocket(server);
-
 SensorsService sensorsManager;
+
+unsigned long lastBroadcastTime = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -28,8 +29,12 @@ void setup() {
 }
 
 void loop() {
-    JsonDocument data = sensorsManager.read();
-    webSocket.sendData(data);
+    unsigned long currentTime = millis();
 
-    delay(BROADCAST_INTERVAL_MS);
+    if (currentTime - lastBroadcastTime >= BROADCAST_INTERVAL_MS) {
+        lastBroadcastTime = currentTime;
+
+        JsonDocument data = sensorsManager.read();
+        webSocket.sendData(data);
+    }
 }

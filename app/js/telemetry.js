@@ -23,12 +23,10 @@ export class TelemetryService {
       load_3_mosfet_32: false
     };
 
-    // Parâmetros Físicos da Simulação / Conversão da Roda (alinhado com config.h)
-    this.targetRpm = 75; // Cadência configurável pelo usuário
+    // Parâmetros Físicos da Simulação
+    this.targetRpm = 75; // Valor configurável pelo usuário na simulação
     this.currentRpm = 75;
     this.pulsesPerRevolution = 5; // N de ímãs / fendas no sensor Hall (G1)
-    this.wheelCircumferenceCm = 191.637151;
-    this.gearRatio = 2.5;
     this.timeSec = 0;
 
     // Acumuladores de Energia (Persistem mesmo em reconexões)
@@ -195,17 +193,7 @@ export class TelemetryService {
       : null;
     const batteryValid = battery && battery.valid !== undefined ? Boolean(battery.valid) : true;
 
-    // O firmware (RPMSensor.cpp) envia velocidade em km/h no campo "rpm"
-    // usando (circumference * 36.0) / deltaTime_ms.
-    // Se vier um campo explícito speed_kmh no futuro, prioriza-o.
-    const speedKmh = raw?.speed_kmh !== undefined
-      ? toNum(raw.speed_kmh, 0)
-      : toNum(raw?.rpm, 0);
-
-    const wheelRpm = (speedKmh * 100000.0) / (60.0 * this.wheelCircumferenceCm);
-    const rpm = raw?.speed_kmh !== undefined && raw?.rpm !== undefined
-      ? toNum(raw.rpm, 0)
-      : wheelRpm / this.gearRatio;
+    const rpm = Math.max(0, toNum(raw?.rpm, 0));
 
     const frequencyHz = toNum(
       raw?.frequency_hz,
@@ -271,8 +259,7 @@ export class TelemetryService {
 
     return {
       timestamp: raw?.timestamp || Date.now(),
-      speed_kmh: Number(speedKmh.toFixed(1)),
-      rpm: Math.round(rpm),
+      rpm: Number(rpm.toFixed(1)),
       frequency_hz: Number(frequencyHz.toFixed(1)),
       voltage_v: Number(voltageV.toFixed(2)),
       current_a: Number(currentA.toFixed(2)),
@@ -356,15 +343,10 @@ export class TelemetryService {
       this.caloriesKcal = this.joulesTotal / 4184.0;
     }
 
-    const speedKmh = Number(
-      (((this.currentRpm * this.gearRatio) * 60.0 * this.wheelCircumferenceCm) / 100000.0).toFixed(1)
-    );
-
     // Monta o pacote de acordo com a Seção 6 da Especificação
     const packet = {
       timestamp: Date.now(),
-      speed_kmh: speedKmh,
-      rpm: Math.round(this.currentRpm),
+      rpm: Number(this.currentRpm.toFixed(1)),
       frequency_hz: frequencyHz,
       voltage_v: voltageV,
       current_a: currentA,

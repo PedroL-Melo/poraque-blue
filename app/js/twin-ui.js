@@ -376,9 +376,8 @@ export class TwinUIManager {
   }
 
   renderKPIs(p) {
-    const speedVal = p.speed_kmh !== undefined ? p.speed_kmh : 0;
-    if (this.kpiRpm) this.kpiRpm.textContent = `${speedVal.toFixed(1)} km/h`;
-    if (this.kpiFreq) this.kpiFreq.textContent = `${p.rpm} RPM • ${p.frequency_hz.toFixed(1)} Hz`;
+    if (this.kpiRpm) this.kpiRpm.textContent = `${Number(p.rpm || 0).toFixed(1)} km/h`;
+    if (this.kpiFreq) this.kpiFreq.textContent = `${p.frequency_hz.toFixed(1)} Hz`;
     if (this.kpiVoltage) this.kpiVoltage.textContent = `${p.voltage_v.toFixed(2)} V`;
     if (this.kpiCurrent) this.kpiCurrent.textContent = `${p.current_a.toFixed(2)} A`;
     if (this.kpiPower) this.kpiPower.textContent = `${p.power_w.toFixed(1)} W`;
@@ -461,8 +460,7 @@ export class TwinUIManager {
    * Atualização ultra-rápida dos nós de texto cacheados enquanto o painel HUD está aberto
    */
   updateInspectionValues(p) {
-    const speedVal = p.speed_kmh !== undefined ? p.speed_kmh : 0;
-    if (this.hudRpmVal) this.hudRpmVal.textContent = `${speedVal.toFixed(1)} km/h`;
+    if (this.hudRpmVal) this.hudRpmVal.textContent = `${Number(p.rpm || 0).toFixed(1)} km/h`;
     if (this.hudFreqVal) this.hudFreqVal.textContent = `${p.frequency_hz.toFixed(1)} Hz`;
     if (this.hudPeriodVal) {
       this.hudPeriodVal.textContent = `${p.frequency_hz > 0 ? (1000 / p.frequency_hz).toFixed(1) : 0} ms`;

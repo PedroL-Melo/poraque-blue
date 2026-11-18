@@ -23,10 +23,12 @@ export class TelemetryService {
       load_3_mosfet_32: false
     };
 
-    // Parâmetros Físicos da Simulação
+    // Parâmetros Físicos da Simulação / Conversão da Roda (alinhado com config.h)
     this.targetRpm = 75; // Cadência configurável pelo usuário
     this.currentRpm = 75;
     this.pulsesPerRevolution = 5; // N de ímãs / fendas no sensor Hall (G1)
+    this.wheelCircumferenceCm = 191.637151;
+    this.gearRatio = 2.5;
     this.timeSec = 0;
 
     // Acumuladores de Energia (Persistem mesmo em reconexões)
@@ -173,51 +175,87 @@ export class TelemetryService {
   }
 
   /**
-   * Normaliza pacote recebido do ESP32, preenchendo campos ausentes e calculando
-   * potências/energias derivadas caso o backend envie apenas valores brutos.
+   * Normaliza pacote recebido do ESP32, suportando tanto o formato novo aninhado
+   * ({ battery: { voltage, current, power, energy, valid }, rpm })
+   * quanto campos na raiz, calculando valores derivados quando necessário.
    */
   normalizePacket(raw) {
     const now = performance.now();
-    const dtSec = Math.max(0.1, Math.min(2.0, (now - this.lastPacketTime) / 1000.0));
+    const dtSec = Math.max(0.05, Math.min(2.0, (now - this.lastPacketTime) / 1000.0));
     this.lastPacketTime = now;
 
-    const rpm = Number(raw.rpm !== undefined ? raw.rpm : 0);
-    const frequencyHz = Number(
-      raw.frequency_hz !== undefined
-        ? raw.frequency_hz
-        : ((rpm / 60.0) * this.pulsesPerRevolution)
-    );
-    const voltageV = Number(raw.voltage_v !== undefined ? raw.voltage_v : (raw.voltage !== undefined ? raw.voltage : 0));
-    const currentA = Number(raw.current_a !== undefined ? raw.current_a : (raw.current !== undefined ? raw.current : 0));
+    const toNum = (val, fallback = 0) => {
+      if (val === undefined || val === null || val === '') return fallback;
+      const n = Number(val);
+      return Number.isFinite(n) ? n : fallback;
+    };
 
-    // Potência instantânea P = V * I
-    const powerW = Number(
-      raw.power_w !== undefined
-        ? raw.power_w
-        : (voltageV * currentA)
+    const battery = raw && typeof raw.battery === 'object' && raw.battery !== null
+      ? raw.battery
+      : null;
+    const batteryValid = battery && battery.valid !== undefined ? Boolean(battery.valid) : true;
+
+    // O firmware (RPMSensor.cpp) envia velocidade em km/h no campo "rpm"
+    // usando (circumference * 36.0) / deltaTime_ms.
+    // Se vier um campo explícito speed_kmh no futuro, prioriza-o.
+    const speedKmh = raw?.speed_kmh !== undefined
+      ? toNum(raw.speed_kmh, 0)
+      : toNum(raw?.rpm, 0);
+
+    const wheelRpm = (speedKmh * 100000.0) / (60.0 * this.wheelCircumferenceCm);
+    const rpm = raw?.speed_kmh !== undefined && raw?.rpm !== undefined
+      ? toNum(raw.rpm, 0)
+      : wheelRpm / this.gearRatio;
+
+    const frequencyHz = toNum(
+      raw?.frequency_hz,
+      (rpm / 60.0) * this.pulsesPerRevolution
     );
 
-    // Acúmulo de energia (integração numérica caso não venha pronta do ESP32)
-    if (raw.joules_total !== undefined) {
-      this.joulesTotal = Number(raw.joules_total);
+    const voltageV = toNum(
+      battery ? battery.voltage : (raw?.voltage_v ?? raw?.voltage),
+      0
+    );
+    const currentA = toNum(
+      battery ? battery.current : (raw?.current_a ?? raw?.current),
+      0
+    );
+
+    // Potência instantânea P = V * I (ou valor direto vindo do PZEM-017)
+    const powerW = toNum(
+      battery ? battery.power : raw?.power_w,
+      voltageV * currentA
+    );
+
+    // Acúmulo de energia:
+    // Se battery.energy (em Wh do PZEM-017) vier válido, converte para J (1 Wh = 3600 J) e kcal.
+    // Se battery.valid === false (falha momentânea no Modbus), preserva o acumulado anterior.
+    if (raw?.watt_hours !== undefined) {
+      this.wattHours = toNum(raw.watt_hours, this.wattHours);
+      this.joulesTotal = raw.joules_total !== undefined
+        ? toNum(raw.joules_total, this.wattHours * 3600.0)
+        : this.wattHours * 3600.0;
+    } else if (battery && battery.energy !== undefined) {
+      if (batteryValid) {
+        this.wattHours = toNum(battery.energy, this.wattHours);
+        this.joulesTotal = this.wattHours * 3600.0;
+      }
+    } else if (raw?.joules_total !== undefined) {
+      this.joulesTotal = toNum(raw.joules_total, this.joulesTotal);
+      this.wattHours = this.joulesTotal / 3600.0;
     } else if (powerW > 0) {
       this.joulesTotal += powerW * dtSec;
-    }
-
-    if (raw.watt_hours !== undefined) {
-      this.wattHours = Number(raw.watt_hours);
-    } else {
       this.wattHours = this.joulesTotal / 3600.0;
     }
 
-    if (raw.calories_kcal !== undefined) {
-      this.caloriesKcal = Number(raw.calories_kcal);
+    if (raw?.calories_kcal !== undefined) {
+      this.caloriesKcal = toNum(raw.calories_kcal, this.caloriesKcal);
     } else {
       this.caloriesKcal = this.joulesTotal / 4184.0;
     }
 
     // Cargas
-    if (raw.loads && typeof raw.loads === 'object') {
+    if (raw?.loads && typeof raw.loads === 'object') {
       this.loads = {
         load_1_relay_25: Boolean(raw.loads.load_1_relay_25),
         load_2_mosfet_26: Boolean(raw.loads.load_2_mosfet_26),
@@ -226,13 +264,14 @@ export class TelemetryService {
     }
 
     // Status
-    const statusObj = raw.status || {};
+    const statusObj = raw?.status || {};
     const buckOk = statusObj.buck_5v_ok !== undefined
       ? Boolean(statusObj.buck_5v_ok)
       : (voltageV >= 6.5);
 
     return {
-      timestamp: raw.timestamp || Date.now(),
+      timestamp: raw?.timestamp || Date.now(),
+      speed_kmh: Number(speedKmh.toFixed(1)),
       rpm: Math.round(rpm),
       frequency_hz: Number(frequencyHz.toFixed(1)),
       voltage_v: Number(voltageV.toFixed(2)),
@@ -244,7 +283,8 @@ export class TelemetryService {
       loads: { ...this.loads },
       status: {
         simulation: false,
-        wifi_rssi: Number(statusObj.wifi_rssi || -50),
+        battery_valid: batteryValid,
+        wifi_rssi: toNum(statusObj.wifi_rssi, -50),
         buck_5v_ok: buckOk
       }
     };
@@ -316,9 +356,14 @@ export class TelemetryService {
       this.caloriesKcal = this.joulesTotal / 4184.0;
     }
 
+    const speedKmh = Number(
+      (((this.currentRpm * this.gearRatio) * 60.0 * this.wheelCircumferenceCm) / 100000.0).toFixed(1)
+    );
+
     // Monta o pacote de acordo com a Seção 6 da Especificação
     const packet = {
       timestamp: Date.now(),
+      speed_kmh: speedKmh,
       rpm: Math.round(this.currentRpm),
       frequency_hz: frequencyHz,
       voltage_v: voltageV,

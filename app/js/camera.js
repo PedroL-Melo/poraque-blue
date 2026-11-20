@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PURAQUÊ BLUE TWIN - CameraController (GPU Transform Engine)
+ * PORAQUÊ BLUE TWIN - CameraController (GPU Transform Engine)
  * Zoom e Pan Acelerados por Hardware via CSS translate3d() + scale() no SVG
  * ============================================================================
  */

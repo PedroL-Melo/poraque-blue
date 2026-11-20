@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Puraquê Blue Twin — Gêmeo Digital Interativo & Telemetria Eletromecânica</title>
+  <title>Poraquê Blue Twin — Gêmeo Digital Interativo & Telemetria Eletromecânica</title>
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="logo.png">
@@ -22,11 +22,11 @@
        ==================================================================== -->
   <header class="twin-header">
     <div class="brand-section">
-      <div class="brand-logo-wrap" title="Puraquê Blue — IFAC">
-        <img src="logo.png" alt="Puraquê Blue Logo" class="brand-logo-img">
+      <div class="brand-logo-wrap" title="Poraquê Blue — IFAC">
+        <img src="logo.png" alt="Poraquê Blue Logo" class="brand-logo-img">
       </div>
       <div class="brand-title">
-        PURAQUÊ BLUE
+        PORAQUÊ BLUE
       </div>
       <div class="institution-pill">
         <span>IFAC — <strong>Campus Rio Branco</strong></span>
@@ -63,11 +63,6 @@
     <!-- KPIs Globais Compactos (Visão Panorâmica) -->
     <div class="global-kpi-bar" id="global-kpis">
       <div class="kpi-card">
-        <div class="label">VELOCIDADE</div>
-        <div class="value cyan" id="kpi-rpm">25.0 km/h</div>
-        <div class="sub" id="kpi-freq">2.1 Hz</div>
-      </div>
-      <div class="kpi-card">
         <div class="label">TENSÃO RETIFICADA</div>
         <div class="value blue" id="kpi-voltage">15.20 V</div>
         <div class="sub">GPIO 34 (ADC1)</div>
@@ -81,11 +76,6 @@
         <div class="label">POTÊNCIA ATIVA</div>
         <div class="value amber" id="kpi-power">22.0 W</div>
         <div class="sub">Instantânea</div>
-      </div>
-      <div class="kpi-card">
-        <div class="label">ENERGIA TOTAL</div>
-        <div class="value" id="kpi-joules">0 J</div>
-        <div class="sub"><span id="kpi-wh">0.00 Wh</span> • <span id="kpi-kcal">0.00 kcal</span></div>
       </div>
     </div>
 
@@ -774,15 +764,15 @@
       if (window.__twinInitialized) return;
       window.__twinInitialized = true;
 
-      console.log('🚀 Inicializando Puraquê Blue Twin...');
+      console.log('🚀 Inicializando Poraquê Blue Twin...');
       const camera = new CameraController('bike-twin-svg');
       const telemetry = new TelemetryService();
       const svgRenderer = new TwinSvgRenderer('bike-twin-svg');
       const ui = new TwinUIManager(camera, telemetry, svgRenderer);
 
       // Expor para depuração no console
-      window.PuraqueTwin = { camera, telemetry, svgRenderer, ui };
-      console.log('✅ Puraquê Blue Twin pronto! Pressione 1, 2, 3, 4 ou clique nos hotspots.');
+      window.PoraqueTwin = { camera, telemetry, svgRenderer, ui };
+      console.log('✅ Poraquê Blue Twin pronto! Pressione 1, 2, 3, 4 ou clique nos hotspots.');
     }
 
     if (document.readyState === 'loading') {

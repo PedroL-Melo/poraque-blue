@@ -1,5 +1,5 @@
 /* ============================================================================
-   PURAQUÊ BLUE TWIN - Estilos Cyber-Laboratory & Gêmeo Digital Interativo
+   PORAQUÊ BLUE TWIN - Estilos Cyber-Laboratory & Gêmeo Digital Interativo
    ============================================================================ */
 
 :root {
@@ -1126,7 +1126,7 @@ body {
     width: 100%;
     max-width: 100%;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     padding: 8px 10px 4px 10px;
     max-height: 85px;

@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PURAQUÊ BLUE TWIN - TwinUIManager
+ * PORAQUÊ BLUE TWIN - TwinUIManager
  * Gerenciador de Interface, Máquina de Estados, Cartões HUD Pré-Montados e Controles
  * ============================================================================
  */

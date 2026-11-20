@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PURAQUÊ BLUE TWIN - TwinSvgRenderer
+ * PORAQUÊ BLUE TWIN - TwinSvgRenderer
  * Controle Dinâmico dos Elementos Gráficos SVG, Animações e Efeitos Físicos
  * ============================================================================
  */

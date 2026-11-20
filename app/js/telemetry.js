@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * PURAQUÊ BLUE TWIN - TelemetryService & Physics Engine
+ * PORAQUÊ BLUE TWIN - TelemetryService & Physics Engine
  * Motor de Simulação de Física Eletromecânica & Cliente WebSocket com Auto-Connect
  * ============================================================================
  */
